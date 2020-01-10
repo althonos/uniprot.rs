@@ -9,3 +9,7 @@ edition = "2018"
 [dependencies]
 chrono = "*"
 quick-xml = "*"
+
+[dev-dependencies]
+ftp = "*"
+libflate = "*"

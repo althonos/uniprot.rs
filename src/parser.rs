@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -15,7 +16,7 @@ macro_rules! state_loop {
     ($self:ident, $start:ident, $buffer:expr, $( $e:ident @ $l:expr => $r:expr ),*  ) => ({
         loop {
             match $self.xml.read_event(&mut $buffer) {
-                $( Ok(Event::Start(ref $e)) if $e.local_name() == $l => $r ),*
+                $( Ok(Event::Start(ref $e)) if $e.local_name() == $l => $r),*
                 Ok(Event::Start(ref e)) => {
                     unimplemented!(
                         "`{}` in `{}`",
@@ -47,6 +48,34 @@ pub struct UniprotParser<B: BufRead> {
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
     finished: bool,
+    ignores: HashSet<&'static [u8]>,
+}
+
+impl<B: BufRead> UniprotParser<B> {
+    pub fn new(reader: B) -> UniprotParser<B> {
+        let mut buffer = Vec::new();
+        let mut cache = None;
+        let mut finished = false;
+        let mut ignores = HashSet::new();
+        let mut xml = Reader::from_reader(reader);
+        xml.expand_empty_elements(true);
+
+        // read until we enter the `uniprot` element
+        cache = loop {
+            buffer.clear();
+            match xml.read_event(&mut buffer) {
+                Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break None,
+                Err(e) => break Some(Err(e)),
+                Ok(Event::Eof) => {
+                    let e = String::from("xml");
+                    break Some(Err(XmlError::UnexpectedEof(e)));
+                }
+                _ => (),
+            }
+        };
+
+        UniprotParser { xml, buffer, cache, finished, ignores }
+    }
 }
 
 impl<B: BufRead> UniprotParser<B> {
@@ -830,28 +859,4 @@ impl<B: BufRead> Iterator for UniprotParser<B> {
             }
         };
     }
-}
-
-pub fn parse<B: BufRead>(reader: B) -> UniprotParser<B> {
-    let mut buffer = Vec::new();
-    let mut cache = None;
-    let mut finished = false;
-    let mut xml = Reader::from_reader(reader);
-    xml.expand_empty_elements(true);
-
-    // read until we enter the `uniprot` element
-    cache = loop {
-        buffer.clear();
-        match xml.read_event(&mut buffer) {
-            Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break None,
-            Err(e) => break Some(Err(e)),
-            Ok(Event::Eof) => {
-                let e = String::from("xml");
-                break Some(Err(XmlError::UnexpectedEof(e)));
-            }
-            _ => (),
-        }
-    };
-
-    UniprotParser { xml, buffer, cache, finished }
 }
