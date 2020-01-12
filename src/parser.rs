@@ -96,9 +96,143 @@ impl<B: BufRead> UniprotParser<B> {
 
     // -----------------------------------------------------------------------
 
+    fn extract_absorption(&mut self, b: &BytesStart) -> Result<Absorption, XmlError> {
+        debug_assert_eq!(b.local_name(), b"absorption");
+
+        let mut absorption = Absorption::default();
+
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"max" => {
+                let max = self.xml.read_text(b"max", &mut buffer)?;
+                if let Some(_) = absorption.max.replace(max) {
+                    panic!("ERR: duplicate `max` in `absorption`");
+                }
+            },
+            e @ b"min" => {
+                let min = self.xml.read_text(b"min", &mut buffer)?;
+                if let Some(_) = absorption.min.replace(min) {
+                    panic!("ERR: duplicate `min` in `absorption`");
+                }
+            },
+            e @ b"text" => {
+                let text = self.xml.read_text(b"text", &mut buffer)?;
+                if let Some(_) = absorption.text.replace(text) {
+                    panic!("ERR: duplicate `text` in `absorption`");
+                }
+            }
+        }
+
+        Ok(absorption)
+    }
+
+    fn extract_kinetics(&mut self, b: &BytesStart) -> Result<Kinetics, XmlError> {
+        debug_assert_eq!(b.local_name(), b"kinetics");
+
+        let mut kinetics = Kinetics::default();
+
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"KM" => {
+                kinetics.km.push(self.xml.read_text(b"KM", &mut buffer)?);
+            },
+            e @ b"Vmax" => {
+                kinetics.vmax.push(self.xml.read_text(b"Vmax", &mut buffer)?);
+            },
+            e @ b"text" => {
+                let text = self.xml.read_text(b"text", &mut buffer)?;
+                if let Some(_) = kinetics.text.replace(text) {
+                    panic!("ERR: duplicate `text` in `kinetics`");
+                }
+            }
+        }
+
+        Ok(kinetics)
+    }
+
     fn extract_accession<'a, 'b>(&'a mut self, b: &BytesStart<'b>) -> Result<String, XmlError> {
         debug_assert_eq!(b.local_name(), b"accession");
         self.xml.read_text(b"accession", &mut self.buffer)
+    }
+
+    fn extract_alternative_products_event(&mut self, b: &BytesStart) -> Result<AlternativeProductEvent, XmlError> {
+        debug_assert_eq!(b.local_name(), b"event");
+
+        use self::AlternativeProductEvent::*;
+
+        match b.attributes()
+            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"type").unwrap_or_default())
+            .transpose()?
+            .as_ref()
+            .map(|a| &*a.value)
+        {
+            Some(b"alternative splicing") => Ok(AlternativeSplicing),
+            Some(b"alternative initiation") => Ok(AlternativeInitiation),
+            Some(b"alternative promoter") => Ok(AlternativePromoter),
+            Some(b"ribosomal frameshifting") => Ok(RibosomalFrameshifting),
+            Some(other) => panic!("ERR: invalid `type` in `event`: {:?}", other),
+            None => panic!("ERR: missing required `type` in `event`"),
+        }
+    }
+
+    fn extract_alternative_products_isoform(&mut self, b: &BytesStart) -> Result<Isoform, XmlError> {
+        let mut ids = Vec::new();
+        let mut names = Vec::new();
+        let mut texts = Vec::new();
+        let mut optseq: Option<IsoformSequence> = None;
+
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"id" => {
+                ids.push(self.xml.read_text(b"id", &mut buffer)?);
+            },
+            e @ b"name" => {
+                names.push(self.xml.read_text(b"name", &mut buffer)?);
+            },
+            e @ b"text" => {
+                texts.push(self.xml.read_text(b"text", &mut buffer)?);
+            },
+            e @ b"sequence" => {
+                let seq = self.extract_alternative_products_isoform_sequence(e)?;
+                if let Some(_) = optseq.replace(seq) {
+                    panic!("ERR: duplicate `sequence` found in `isoform`");
+                }
+            }
+        }
+
+        let seq = optseq
+            .expect("ERR: missing required `sequence` element in `isoform`");
+        let mut isoform = Isoform::new(seq);
+        isoform.names = names;
+        isoform.ids = ids;
+        isoform.texts = texts;
+
+        Ok(isoform)
+    }
+
+    fn extract_alternative_products_isoform_sequence(&mut self, b: &BytesStart) -> Result<IsoformSequence, XmlError> {
+        debug_assert_eq!(b.local_name(), b"sequence");
+
+        use self::IsoformSequenceType::*;
+
+        let attr = self.make_attrs(b)?;
+        let mut seq = match attr.get(&b"type"[..]).map(|x| &*x.value) {
+            Some(b"not described") => IsoformSequence::new(NotDescribed),
+            Some(b"described") => IsoformSequence::new(Described),
+            Some(b"displayed") => IsoformSequence::new(Displayed),
+            Some(b"external") => IsoformSequence::new(External),
+            Some(other) => panic!("ERR: invalid value for `type` in `sequence`: {:?}", other),
+            None => panic!("ERR: missing `type` attribute in `sequence`"),
+        };
+
+        // extract optional reference
+        seq.reference = attr.get(&b"ref"[..])
+            .map(|x| x.unescape_and_decode_value(&mut self.xml))
+            .transpose()?;
+
+        // read to end
+        self.xml.read_to_end(b.local_name(), &mut Vec::new());
+        Ok(seq)
     }
 
     fn extract_citation(&mut self, b: &BytesStart) -> Result<Citation, XmlError> {
@@ -182,6 +316,424 @@ impl<B: BufRead> UniprotParser<B> {
         Ok(citation)
     }
 
+    fn extract_cofactor(&mut self, b: &BytesStart) -> Result<Cofactor, XmlError> {
+        debug_assert_eq!(b"cofactor", b.local_name());
+
+        let attr = self.make_attrs(b)?;
+        let mut optname = None;
+        let mut optdbref = None;
+
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"name" => {
+                let name = self.xml.read_text(b"name", &mut buffer)?;
+                if let Some(_) = optname.replace(name) {
+                    panic!("ERR: duplicate `name` element in `cofactor`");
+                }
+            },
+            e @ b"dbReference" => {
+                let dbref = self.extract_db_reference(e)?;
+                if let Some(_) = optdbref.replace(dbref) {
+                    panic!("ERR: duplicate `dbReference` in `cofactor`")
+                }
+            }
+        }
+
+        let name = optname.expect("ERR: missing required `name` in `cofactor`");
+        let db_reference = optdbref.expect("ERR: missing required `dbReference` in `cofactor`");
+        let evidences = self.get_evidences(&attr)?;
+
+        Ok(Cofactor { name, db_reference, evidences })
+    }
+
+    fn extract_comment(&mut self, b: &BytesStart) -> Result<Comment, XmlError> {
+        macro_rules! comment_loop {
+            (
+                $self:ident,
+                $start:ident,
+                $buffer:expr,
+                $comment:expr
+                $(, $e:ident @ $l:expr => $r:expr )*
+            ) => ({
+                state_loop!{$self, $start, $buffer,
+                    $( $e @ $l => $r ,)*
+                    e @ b"text" => {
+                        $comment.text.push($self.xml.read_text(b"text", &mut $buffer)?);
+                    },
+                    e @ b"molecule" => {
+                        $comment.molecule = Some(self.extract_molecule(e)?);
+                    }
+                }
+            })
+        }
+
+        let attr = self.make_attrs(b)?;
+        let mut buffer = Vec::new();
+        let mut comment = Comment::new(CommentType::Miscellaneous);
+
+        match attr.get(&b"type"[..]).map(|x| &*x.value) {
+            Some(b"function") => {
+                comment.ty = CommentType::Function;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"similarity") => {
+                comment.ty = CommentType::Similarity;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"subunit") => {
+                comment.ty = CommentType::Subunit;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"PTM") => {
+                comment.ty = CommentType::Ptm;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"developmental stage") => {
+                comment.ty = CommentType::DevelopmentalStage;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"disruption phenotype") => {
+                comment.ty = CommentType::DisruptionPhenotype;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"tissue specificity") => {
+                comment.ty = CommentType::TissueSpecificity;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"miscellaneous") => {
+                comment.ty = CommentType::Miscellaneous;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"induction") => {
+                comment.ty = CommentType::Induction;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"caution") => {
+                comment.ty = CommentType::Caution;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"pathway") => {
+                comment.ty = CommentType::Pathway;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"toxic dose") => {
+                comment.ty = CommentType::ToxicDose;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"activity regulation") => {
+                comment.ty = CommentType::ActivityRegulation;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"domain") => {
+                comment.ty = CommentType::Domain;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"biotechnology") => {
+                comment.ty = CommentType::Biotechnology;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"polymorphism") => {
+                comment.ty = CommentType::Polymorphism;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"pharmaceutical") => {
+                comment.ty = CommentType::Pharmaceutical;
+                comment_loop!{self, b, buffer, comment}
+            }
+            Some(b"allergen") => {
+                comment.ty = CommentType::Allergen;
+                comment_loop!{self, b, buffer, comment}
+            }
+
+            Some(b"subcellular location") => {
+                let mut locations = Vec::new();
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"subcellularLocation" => {
+                        locations.push(self.extract_subcellular_location(e)?);
+                    }
+                }
+                comment.ty = CommentType::SubcellularLocation(locations);
+            }
+
+            Some(b"alternative products") => {
+                let mut product = AlternativeProduct::default();
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"event" => {
+                        product.events.push(self.extract_alternative_products_event(e)?);
+                    },
+                    e @ b"isoform" => {
+                        product.isoforms.push(self.extract_alternative_products_isoform(e)?);
+                    }
+                }
+                comment.ty = CommentType::AlternativeProduct(product);
+            }
+
+            Some(b"interaction") => {
+                let mut organisms_differ = false;
+                let mut experiments = None;
+                let mut interactants = Vec::new();
+
+                // extract interaction elements
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"interactant" => {
+                        interactants.push(self.extract_interactant(e)?);
+                    },
+                    e @ b"organismsDiffer" => {
+                        let text = self.xml.read_text(b"organismsDiffer", &mut buffer)?;
+                        organisms_differ = bool::from_str(&text)
+                            .expect("ERR: could not parse `organismsDiffer` as bool");
+                    },
+                    e @ b"experiments" => {
+                        let text = self.xml.read_text(b"experiments", &mut buffer)?;
+                        experiments = usize::from_str(&text)
+                            .map(Some)
+                            .expect("ERR: could not parse `experiments` as usize");
+                    }
+                }
+
+                // check that we have 2 interactants
+                let i2 = interactants.pop().expect("ERR: missing `interactant` in `interaction`");
+                let i1 = interactants.pop().expect("ERR: missing `interactant` in `interaction`");
+                if !interactants.is_empty() {
+                    panic!("ERR: too many `interactant` in `interaction`");
+                }
+
+                // create new interaction
+                comment.ty = CommentType::Interaction(Interaction {
+                    organisms_differ,
+                    experiments: experiments
+                        .expect("ERR: missing `experiments` in `interaction`"),
+                    interactants: (i1, i2),
+                });
+            }
+
+            Some(b"sequence caution") => {
+                let mut optconflict = None;
+
+                // extract inner `conflict`
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"conflict" => {
+                        let conflict = self.extract_conflict(e)?;
+                        if let Some(_) = optconflict.replace(conflict) {
+                            panic!("ERR: duplicate `conflict` in `sequence caution`")
+                        }
+                    }
+                }
+
+                // check a `conflict` was extracted
+                comment.ty = optconflict.map(CommentType::SequenceCaution)
+                    .expect("ERR: missing `conflict` in `sequence caution`");
+            }
+
+            Some(b"mass spectrometry") => {
+                let mut ms = MassSpectrometry::default();
+                ms.mass = attr.get(&b"mass"[..])
+                    .map(|x| x.unescape_and_decode_value(&mut self.xml))
+                    .transpose()?
+                    .map(|s| f64::from_str(&s))
+                    .transpose()
+                    .expect("could not parse `mass` as f64");
+                ms.error = attr.get(&b"error"[..])
+                    .map(|x| x.unescape_and_decode_value(&mut self.xml))
+                    .transpose()?;
+                ms.method = attr.get(&b"method"[..])
+                    .map(|x| x.unescape_and_decode_value(&mut self.xml))
+                    .transpose()?;
+
+                self.xml.read_to_end(b"comment", &mut buffer)?;
+                comment.ty = CommentType::MassSpectrometry(ms);
+            }
+
+            Some(b"disease") => {
+                let mut optdisease = None;
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"disease" => {
+                        let disease = self.extract_disease(e)?;
+                        if let Some(_) = optdisease.replace(disease) {
+                            panic!("ERR: duplicate `disease` in `comment`")
+                        }
+                    }
+                }
+                comment.ty = CommentType::Disease(optdisease);
+            }
+
+            Some(b"biophysicochemical properties") => {
+                let mut bcp = BiophysicochemicalProperties::default();
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"absorption" => {
+                        let absorption = self.extract_absorption(e)?;
+                        if let Some(_) = bcp.absorption.replace(absorption) {
+                            panic!("ERR: duplicate `absorption` in `comment`")
+                        }
+                    },
+                    e @ b"kinetics" => {
+                        let kinetics = self.extract_kinetics(e)?;
+                        if let Some(_) = bcp.kinetics.replace(kinetics) {
+                            panic!("ERR: duplicate `kinetics` in `comment`")
+                        }
+                    },
+                    e @ b"phDependence" => {
+                        state_loop!{self, e, self.buffer,
+                            t @ b"text" => {
+                                let text = self.xml.read_text(b"text", &mut self.buffer)?;
+                                bcp.ph_dependence = Some(text);
+                            }
+                        }
+                    },
+                    e @ b"redoxPotential" => {
+                        state_loop!{self, e, self.buffer,
+                            t @ b"text" => {
+                                let text = self.xml.read_text(b"text", &mut self.buffer)?;
+                                bcp.redox_potential = Some(text);
+                            }
+                        }
+                    },
+                    e @ b"temperatureDependence" => {
+                        state_loop!{self, e, self.buffer,
+                            t @ b"text" => {
+                                let text = self.xml.read_text(b"text", &mut self.buffer)?;
+                                bcp.temperature_dependence = Some(text);
+                            }
+                        }
+                    }
+                }
+                comment.ty = CommentType::BiophysicochemicalProperties(bcp);
+            }
+
+            Some(b"catalytic activity") => {
+                let mut physio = Vec::new();
+                let mut optreact = None;
+
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"reaction" => {
+                        let reaction = self.extract_reaction(e)?;
+                        if let Some(_) = optreact.replace(reaction) {
+                            panic!("ERR: duplicate `reaction` in `comment`")
+                        }
+                    },
+                    e @ b"physiologicalReaction" => {
+                        physio.push(self.extract_physiological_reaction(e)?);
+
+                    }
+                }
+
+                let mut act = optreact.map(CatalyticActivity::new)
+                    .expect("ERR: could not find required `reaction` in `comment`");
+
+                if physio.len() > 2 {
+                    panic!("ERR: too many `physiologicalReaction` found in `comment`")
+                }
+                act.physiological_reactions = physio;
+                comment.ty = CommentType::CatalyticActivity(act);
+            }
+
+            Some(b"online information") => {
+                let mut info = OnlineInformation::default();
+                info.name = attr.get(&b"name"[..])
+                    .map(|a| a.unescape_and_decode_value(&self.xml))
+                    .transpose()?;
+
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"link" => {
+                        let uri = e.attributes()
+                            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"uri").unwrap_or_default())
+                            .transpose()?
+                            .map(|a| a.unescape_and_decode_value(&mut self.xml))
+                            .transpose()?
+                            .map(|s| url::Url::parse(&s))
+                            .expect("ERR: could not find required `uri` on `link`")
+                            .expect("ERR: could not parse `uri` as url::Url");
+                        info.links.push(uri);
+                        self.xml.read_to_end(b"link", &mut buffer)?;
+                    }
+                }
+
+                comment.ty = CommentType::OnlineInformation(info);
+            }
+
+            Some(b"cofactor") => {
+                let mut cofactors = Vec::new();
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"cofactor" => cofactors.push(self.extract_cofactor(e)?)
+                }
+                comment.ty = CommentType::Cofactor(cofactors)
+            }
+
+            Some(b"RNA editing") => {
+                let mut locations = Vec::new();
+                comment_loop!{self, b, buffer, comment,
+                    e @ b"location" => locations.push(self.extract_feature_location(e)?)
+                }
+                comment.ty = CommentType::RnaEditing(locations);
+            }
+
+            Some(other) => panic!("unknown `type` in `comment`: {:?}", String::from_utf8_lossy(other)),
+            None => panic!("could not find required `type` attribute on `comment`"),
+        }
+
+        Ok(comment)
+    }
+
+    fn extract_conflict(&mut self, b: &BytesStart) -> Result<Conflict, XmlError> {
+        debug_assert_eq!(b.local_name(), b"conflict");
+
+        use self::ConflictType::*;
+
+        let attr = self.make_attrs(b)?;
+        let mut conflict = match attr.get(&b"type"[..]).map(|x| &*x.value) {
+            Some(b"frameshift") => Conflict::new(Frameshift),
+            Some(b"erroneous initiation") => Conflict::new(ErroneousInitiation),
+            Some(b"erroneous termination") => Conflict::new(ErroneousTermination),
+            Some(b"erroneous gene model prediction") => Conflict::new(ErroneousGeneModelPrediction),
+            Some(b"erroneous translation") => Conflict::new(ErroneousTranslation),
+            Some(b"miscellaneous discrepancy") => Conflict::new(MiscellaneousDiscrepancy),
+            Some(other) => panic!("ERR: invalid `type` in `conflict`: {:?}", other),
+            None => panic!("ERR: missing required `type` in `conflict`"),
+        };
+
+        // extract optional reference
+        conflict.reference = attr.get(&b"ref"[..])
+            .map(|x| x.unescape_and_decode_value(&mut self.xml))
+            .transpose()?;
+
+        // extract `sequence` element
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"sequence" => {
+                let sequence = self.extract_conflict_sequence(e)?;
+                if let Some(_) = conflict.sequence.replace(sequence) {
+                    panic!("ERR: duplicate `sequence` in `conflict`");
+                }
+            }
+        }
+
+        Ok(conflict)
+    }
+
+    fn extract_conflict_sequence(&mut self, b: &BytesStart) -> Result<ConflictSequence, XmlError> {
+        debug_assert_eq!(b.local_name(), b"sequence");
+
+        let attr = self.make_attrs(b)?;
+        let id = attr.get(&b"id"[..])
+            .expect("ERR: could not find required `id` attr on `sequence`")
+            .unescape_and_decode_value(&mut self.xml)?;
+        let version = attr.get(&b"version"[..])
+            .map(|x| x.unescape_and_decode_value(&mut self.xml))
+            .transpose()?
+            .map(|s| usize::from_str(&s))
+            .transpose()
+            .expect("ERR: could not decode `version` as usize");
+        let resource = match attr.get(&b"resource"[..]).map(|a| &*a.value) {
+            Some(b"EMBL") => ConflictSequenceResource::Embl,
+            Some(b"EMBL-CDS") => ConflictSequenceResource::EmblCds,
+            Some(other) => panic!("ERR: invalid `resource` in `sequence`: {:?}", other),
+            None => panic!("ERR: missing required `resource` in `sequence`"),
+        };
+
+        self.xml.read_to_end(b.local_name(), &mut Vec::new());
+        Ok(ConflictSequence::with_version(id, resource, version))
+    }
+
     fn extract_db_reference(&mut self, b: &BytesStart) -> Result<DbReference, XmlError> {
         debug_assert_eq!(b.local_name(), b"dbReference");
 
@@ -210,6 +762,56 @@ impl<B: BufRead> UniprotParser<B> {
         }
 
         Ok(db_reference)
+    }
+
+    fn extract_disease(&mut self, b: &BytesStart) -> Result<Disease, XmlError> {
+        debug_assert_eq!(b.local_name(), b"disease");
+
+        let mut optname = None;
+        let mut optdesc = None;
+        let mut optacro = None;
+        let mut optdbref = None;
+
+        let id = b.attributes()
+            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"id").unwrap_or_default())
+            .expect("ERR: could not find required `id` attr on `disease`")?
+            .unescape_and_decode_value(&mut self.xml)?;
+
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"name" => {
+                let name = self.xml.read_text(b"name", &mut buffer)?;
+                if let Some(_) = optname.replace(name) {
+                    panic!("ERR: duplicate `name` in `disease`");
+                }
+            },
+            e @ b"acronym" => {
+                let acronym = self.xml.read_text(b"acronym", &mut buffer)?;
+                if let Some(_) = optacro.replace(acronym) {
+                    panic!("ERR: duplicate `acronym` in `disease`");
+                }
+            },
+            e @ b"description" => {
+                let description = self.xml.read_text(b"description", &mut buffer)?;
+                if let Some(_) = optdesc.replace(description) {
+                    panic!("ERR: duplicate `description` in `disease`");
+                }
+            },
+            e @ b"dbReference" => {
+                let db_reference = self.extract_db_reference(e)?;
+                if let Some(_) = optdbref.replace(db_reference) {
+                    panic!("ERR: duplicate `db_reference` in `disease`");
+                }
+            }
+        }
+
+        Ok(Disease {
+            id,
+            name: optname.expect("ERR: missing `name` in `disease`"),
+            description: optdesc.expect("ERR: missing `description` in `disease`"),
+            acronym: optacro.expect("ERR: missing `acronym` in `disease`"),
+            db_reference: optdbref.expect("ERR: missing `db_reference` in `disease`"),
+        })
     }
 
     fn extract_entry(&mut self, b: &BytesStart) -> Result<Entry, XmlError> {
@@ -243,8 +845,7 @@ impl<B: BufRead> UniprotParser<B> {
                 entry.references.push(self.extract_reference(e)?);
             },
             e @ b"comment" => {
-                // println!("TODO `comment` in `entry`");
-                self.xml.read_to_end(b"comment", &mut buffer)?;
+                entry.comments.push(self.extract_comment(e)?);
             },
             e @ b"dbReference" => {
                 entry.db_references.push(self.extract_db_reference(e)?);
@@ -505,6 +1106,34 @@ impl<B: BufRead> UniprotParser<B> {
         Ok(GeneName::new_with_evidence(name, ty, evidence))
     }
 
+    fn extract_interactant(&mut self, b: &BytesStart) -> Result<Interactant, XmlError> {
+        debug_assert_eq!(b.local_name(), b"interactant");
+
+        let mut interactant = b.attributes()
+            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"intactId").unwrap_or_default())
+            .transpose()?
+            .map(|a| a.unescape_and_decode_value(&mut self.xml).map(Interactant::new))
+            .expect("ERR: could not find required `intactId` attr on `interactant`")?;
+
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"id" => {
+                let mut id = self.xml.read_text(b"id", &mut buffer)?;
+                if let Some(_) = interactant.id.replace(id) {
+                    panic!("ERR: duplicate `id` found in `interactant`");
+                }
+            },
+            e @ b"label" => {
+                let mut label = self.xml.read_text(b"label", &mut buffer)?;
+                if let Some(_) = interactant.label.replace(label) {
+                    panic!("ERR: duplicate `label` found in `interactant`");
+                }
+            }
+        }
+
+        Ok(interactant)
+    }
+
     fn extract_keyword(&mut self, b: &BytesStart) -> Result<Keyword, XmlError> {
         debug_assert_eq!(b.local_name(), b"keyword");
 
@@ -525,14 +1154,20 @@ impl<B: BufRead> UniprotParser<B> {
         debug_assert_eq!(b.local_name(), b"molecule");
 
         let mut buffer = Vec::new();
-        self.xml.read_to_end(b.local_name(), &mut buffer)?;
+        let mut molecule = Molecule::default();
 
-        let attr = self.make_attrs(b)?;
+        let text = self.xml.read_text(b.local_name(), &mut buffer)?;
+        if !text.is_empty() {
+            molecule.text = Some(text);
+        }
 
-        attr.get(&b"id"[..])
-            .expect("ERR: could not find required `id` attribute on `molecule`")
-            .unescape_and_decode_value(&mut self.xml)
-            .map(Molecule::new)
+        molecule.id = b.attributes()
+            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"id").unwrap_or_default())
+            .transpose()?
+            .map(|x| x.unescape_and_decode_value(&mut self.xml))
+            .transpose()?;
+
+        Ok(molecule)
     }
 
     fn extract_name(&mut self, b: &BytesStart) ->  Result<String, XmlError> {
@@ -595,6 +1230,36 @@ impl<B: BufRead> UniprotParser<B> {
             Some(other) => panic!("ERR: invalid value for organism name type: {:?}", other),
             None => panic!("ERR: missing required value for `name` in `organism`"),
         }
+    }
+
+    fn extract_physiological_reaction(&mut self, b: &BytesStart) -> Result<PhysiologicalReaction, XmlError> {
+        debug_assert_eq!(b.local_name(), b"physiologicalReaction");
+
+        use self::PhysiologicalReactionDirection::*;
+
+        let attr = self.make_attrs(b)?;
+        let evidences = self.get_evidences(&attr)?;
+        let direction = match attr.get(&b"direction"[..]).map(|a| &*a.value) {
+            Some(b"left-to-right") => LeftToRight,
+            Some(b"right-to-left")=> RightToLeft,
+            Some(other) => panic!("ERR: invalid `direction` for `physiologicalReaction`: {:?}", other),
+            None => panic!("ERR: missing required `direction` for `physiologicalReaction`")
+        };
+
+        let mut optdbref = None;
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"dbReference" => {
+                let dbref = self.extract_db_reference(e)?;
+                if let Some(_) = optdbref.replace(dbref) {
+                    panic!("ERR: duplicate `dbReference` found in `reaction`");
+                }
+            }
+        }
+
+        let db_reference = optdbref
+            .expect("ERR: could not find required `dbReference` in `physiologicalReaction`");
+        Ok(PhysiologicalReaction { db_reference, direction, evidences })
     }
 
     fn extract_property(&mut self, b: &BytesStart) -> Result<Property, XmlError> {
@@ -692,6 +1357,32 @@ impl<B: BufRead> UniprotParser<B> {
         };
 
         Ok(group)
+    }
+
+    fn extract_reaction(&mut self, b: &BytesStart) -> Result<Reaction, XmlError> {
+        debug_assert_eq!(b.local_name(), b"reaction");
+
+        let attr = self.make_attrs(b)?;
+        let evidences = self.get_evidences(&attr)?;
+
+        let mut db_references = Vec::new();
+        let mut opttext = None;
+
+        let mut buffer = Vec::new();
+        state_loop!{self, b, buffer,
+            e @ b"text" => {
+                let text = self.xml.read_text(b"text", &mut buffer)?;
+                if let Some(_) = opttext.replace(text) {
+                    panic!("ERR: duplicate `text` found in `reaction`");
+                }
+            },
+            e @ b"dbReference" => {
+                db_references.push(self.extract_db_reference(e)?);
+            }
+        }
+
+        let text = opttext.expect("ERR: could not find required `text` in `reaction`");
+        Ok(Reaction { text, db_references, evidences })
     }
 
     fn extract_reference(&mut self, b: &BytesStart) -> Result<Reference, XmlError> {
@@ -818,6 +1509,29 @@ impl<B: BufRead> UniprotParser<B> {
         }
 
         Ok(sources)
+    }
+
+    fn extract_subcellular_location(&mut self, b: &BytesStart) -> Result<SubcellularLocation, XmlError> {
+        let mut subloc = SubcellularLocation::default();
+        let mut buffer = Vec::new();
+
+        state_loop!{self, b, buffer,
+            e @ b"location" => {
+                subloc.locations.push(self.xml.read_text(b"location", &mut buffer)?);
+            },
+            e @ b"topology" => {
+                subloc.topologies.push(self.xml.read_text(b"topology", &mut buffer)?);
+            },
+            e @ b"orientation" => {
+                subloc.orientations.push(self.xml.read_text(b"orientation", &mut buffer)?);
+            }
+        }
+
+        if subloc.locations.is_empty() {
+            panic!("ERR: missing required `location` in `subcellularLocation`");
+        }
+
+        Ok(subloc)
     }
 }
 

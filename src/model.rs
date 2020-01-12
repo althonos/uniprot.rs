@@ -11,6 +11,9 @@
 //
 // type Copyright = String;
 //
+
+use url::Url;
+
 // // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
@@ -31,7 +34,7 @@ pub struct Entry {
     pub organism_hosts: Vec<Organism>,
     pub gene_location: Vec<GeneLocation>,
     pub references: Vec<Reference>,  // minOccurs = 1
-    // comment: Vec<Comment>,      // nillable
+    pub comments: Vec<Comment>,      // nillable
     pub db_references: Vec<DbReference>,
     pub protein_existence: ProteinExistence,
     pub keywords: Vec<Keyword>,
@@ -52,6 +55,7 @@ impl Entry {
             organism_hosts: Default::default(),
             gene_location: Default::default(),
             references: Default::default(),
+            comments: Default::default(),
             db_references: Default::default(),
             protein_existence: Default::default(),
             keywords: Default::default(),
@@ -102,7 +106,7 @@ pub struct ProteinNameGroup {
     pub recommended: Option<ProteinName>,
     pub alternative: Vec<ProteinName>,
     pub submitted: Vec<ProteinName>,
-    pub allergen: Option<String>,     // FIXME: type
+    pub allergen: Option<String>,     // FIXME: type should be evidence text?
     pub biotech: Option<String>,
     pub cd_antigen: Vec<String>,
     pub inn: Vec<String>,
@@ -351,57 +355,310 @@ pub enum Source {
 }
 
 // ---------------------------------------------------------------------------
-//
-// /// Describes different types of general annotations.
-// struct Comment {
-//     // fields
-//     molecule: Option<Molecule>,
-//     location: Vec<Location>,
-//     text: Vec<EvidenceText>,
-//     ty: CommentType,
-//     evidence: Vec<usize>,
-// }
-//
-// enum CommentType {
-//     Allergen,
-//     AlternativeProducts,
-//     Biotechnology,
-//     BiophysiochemicalProperties,
-//     CatalyticActivity,
-//     Caution,
-//     Cofactor,
-//     DevelopmentalStage,
-//     Disease,
-//     Domain,
-//     DisruptionPhenotype,
-//     ActivityRegulation,
-//     Function,
-//     Induction,
-//     Miscellaneous,
-//     Pathway,
-//     Pharmaceutical,
-//     Polymorphism,
-//     Ptm,
-//     RnaEditing {
-//         location: Option<String>,
-//     },
-//     Similarity,
-//     SubcellularLocation,
-//     SequenceCaution,
-//     Subunit,
-//     TissueSpecificity,
-//     ToxicDose,
-//     OnlineInformation {
-//         name: Option<String>,
-//     },
-//     MassSpectrometry {
-//         mass: Option<f64>,
-//         error: Option<String>,
-//         method: Option<String>,
-//     },
-//     Interaction,
-// }
-//
+
+#[derive(Debug, Clone)]
+/// Describes different types of general annotations.
+pub struct Comment {
+    // fields
+    pub molecule: Option<Molecule>,
+    // location: Vec<Location>,
+    pub text: Vec<String>,              // FIXME: type should be evidence text?
+    pub ty: CommentType,
+    // evidence: Vec<usize>,            // TODO: extract evidence attribute
+}
+
+impl Comment {
+    pub fn new(ty: CommentType) -> Self {
+        Self {
+            ty,
+            molecule: Default::default(),
+            text: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum CommentType {
+    Allergen,
+    AlternativeProduct(AlternativeProduct),
+    Biotechnology,
+    BiophysicochemicalProperties(BiophysicochemicalProperties),
+    CatalyticActivity(CatalyticActivity),
+    Caution,
+    Cofactor(Vec<Cofactor>),
+    DevelopmentalStage,
+    Disease(Option<Disease>),
+    Domain,
+    DisruptionPhenotype,
+    ActivityRegulation,
+    Function,
+    Induction,
+    Miscellaneous,
+    Pathway,
+    Pharmaceutical,
+    Polymorphism,
+    Ptm,
+    RnaEditing(Vec<FeatureLocation>), // FIXME: possible dedicated type
+    Similarity,
+    SubcellularLocation(Vec<SubcellularLocation>),
+    SequenceCaution(Conflict),
+    Subunit,
+    TissueSpecificity,
+    ToxicDose,
+    OnlineInformation(OnlineInformation),
+    MassSpectrometry(MassSpectrometry),
+    Interaction(Interaction),
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct MassSpectrometry {
+    pub mass: Option<f64>,
+    pub error: Option<String>,
+    pub method: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Cofactor {
+    pub name: String,
+    pub db_reference: DbReference,
+    pub evidences: Vec<usize>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct OnlineInformation {
+    pub name: Option<String>,
+    pub links: Vec<Url>
+}
+
+#[derive(Debug, Clone)]
+pub struct CatalyticActivity {
+    pub reaction: Reaction,
+    pub physiological_reactions: Vec<PhysiologicalReaction>
+}
+
+impl CatalyticActivity {
+    pub fn new(reaction: Reaction) -> Self {
+        Self {
+            reaction,
+            physiological_reactions: Vec::new()
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Reaction {
+    pub text: String,
+    pub db_references: Vec<DbReference>,
+    pub evidences: Vec<usize>,
+}
+
+impl Reaction {
+    pub fn new(text: String) -> Self {
+        Self {
+            text,
+            db_references: Default::default(),
+            evidences: Default::default()
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+/// Describes a physiological reaction.
+pub struct PhysiologicalReaction {
+    pub db_reference: DbReference,
+    pub evidences: Vec<usize>,
+    pub direction: PhysiologicalReactionDirection,
+}
+
+#[derive(Debug, Clone)]
+pub enum PhysiologicalReactionDirection {
+    LeftToRight,
+    RightToLeft
+}
+
+#[derive(Debug, Clone)]
+pub struct Disease {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub acronym: String,
+    pub db_reference: DbReference,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BiophysicochemicalProperties {
+    pub absorption: Option<Absorption>,
+    pub kinetics: Option<Kinetics>,
+    pub ph_dependence: Option<String>, // TODO: EvidenceString
+    pub redox_potential: Option<String>,  // TODO: EvidenceString
+    pub temperature_dependence: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Absorption {
+    pub max: Option<String>, // FIXME: evidence string
+    pub min: Option<String>, // FIXME: evidence string
+    pub text: Option<String>, // FIXME: evidence string
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Kinetics {
+    pub km: Vec<String>, // FIXME: evidence string
+    pub vmax: Vec<String>, // FIXME: evidence string
+    pub text: Option<String>  // FIXME: evidence string
+}
+
+#[derive(Debug, Default, Clone)]
+/// Describes the subcellular location and optionally the topology and orientation of a molecule.
+pub struct SubcellularLocation {
+    pub locations: Vec<String>, // TODO: EvidenceString, minOccurs = "1"
+    pub topologies: Vec<String>, // TODO: EvidenceString,
+    pub orientations: Vec<String>, // TODO: EvidenceString,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct AlternativeProduct {
+    pub events: Vec<AlternativeProductEvent>,
+    pub isoforms: Vec<Isoform>,
+}
+
+#[derive(Debug, Clone)]
+pub enum AlternativeProductEvent {
+    AlternativeSplicing,
+    AlternativeInitiation,
+    AlternativePromoter,
+    RibosomalFrameshifting,
+}
+
+#[derive(Debug, Clone)]
+pub struct Isoform {
+    pub ids: Vec<String>,
+    pub names: Vec<String>,
+    pub sequence: IsoformSequence,
+    pub texts: Vec<String>,
+}
+
+impl Isoform {
+    pub fn new(sequence: IsoformSequence) -> Self {
+        Self {
+            ids: Default::default(),
+            names: Default::default(),
+            sequence,
+            texts: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct IsoformSequence {
+    pub ty: IsoformSequenceType,
+    pub reference: Option<String>,
+}
+
+impl IsoformSequence {
+    pub fn new(ty: IsoformSequenceType) -> Self {
+        Self::with_reference(ty, None)
+    }
+
+    pub fn with_reference<R>(ty: IsoformSequenceType, reference: R) -> Self
+    where
+        R: Into<Option<String>>
+    {
+        Self {
+            ty,
+            reference: reference.into()
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum IsoformSequenceType {
+    NotDescribed,
+    Described,
+    Displayed,
+    External
+}
+
+#[derive(Debug, Clone)]
+pub struct Interaction {
+    pub interactants: (Interactant, Interactant),
+    pub organisms_differ: bool,
+    pub experiments: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Interactant {
+    pub interactant_id: String,
+    pub id: Option<String>,
+    pub label: Option<String>,
+}
+
+impl Interactant {
+    pub fn new(interactant_id: String) -> Self {
+        Self {
+            interactant_id,
+            id: Default::default(),
+            label: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Conflict {
+    pub ty: ConflictType,
+    pub reference: Option<String>,
+    pub sequence: Option<ConflictSequence>
+}
+
+impl Conflict {
+    pub fn new(ty: ConflictType) -> Self {
+        Self {
+            ty,
+            reference: Default::default(),
+            sequence: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ConflictType {
+    Frameshift,
+    ErroneousInitiation,
+    ErroneousTermination,
+    ErroneousGeneModelPrediction,
+    ErroneousTranslation,
+    MiscellaneousDiscrepancy
+}
+
+#[derive(Debug, Clone)]
+pub struct ConflictSequence {
+    pub id: String,
+    pub resource: ConflictSequenceResource,
+    pub version: Option<usize>,
+}
+
+impl ConflictSequence {
+    pub fn new(id: String, resource: ConflictSequenceResource) -> Self {
+        Self::with_version(id, resource, None)
+    }
+
+    pub fn with_version<N>(id: String, resource: ConflictSequenceResource, version: N) -> Self
+    where
+        N: Into<Option<usize>>
+    {
+        Self {
+            id,
+            resource,
+            version: version.into()
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ConflictSequenceResource {
+    Embl,
+    EmblCds,
+}
 
 // ---------------------------------------------------------------------------
 
@@ -416,12 +673,19 @@ pub struct DbReference {
 
 #[derive(Debug, Default, Clone)]
 pub struct Molecule {
-    pub id: String
+    pub id: Option<String>,
+    pub text: Option<String>,
 }
 
 impl Molecule {
-    pub fn new(id: String) -> Self {
-        Self { id }
+    pub fn with_id<S>(id: S) -> Self
+    where
+        S: Into<Option<String>>
+    {
+        Self {
+            id: id.into(),
+            text: None,
+        }
     }
 }
 

@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 chrono = "*"
 quick-xml = "*"
+url = "*"
 
 [dev-dependencies]
 ftp = "*"

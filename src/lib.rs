@@ -1,5 +1,6 @@
 extern crate chrono;
 extern crate quick_xml;
+extern crate url;
 
 pub mod parser;
 pub mod model;
