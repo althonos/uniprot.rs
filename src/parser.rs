@@ -22,13 +22,13 @@ macro_rules! parse_inner {
             $buffer.clear();
             match $reader.read_event($buffer) {
                 Ok(Event::Start(ref x)) => {
-                    parse_inner_impl!(x, $($rest)*);
+                    parse_inner_impl!(x, x.local_name(), $($rest)*);
                     $reader.read_to_end(x.local_name(), &mut Vec::new())?;
-                    // unimplemented!(
-                    //     "`{}` in `{}`",
-                    //     String::from_utf8_lossy(x.local_name()),
-                    //     String::from_utf8_lossy($event.local_name())
-                    // );
+                    unimplemented!(
+                        "`{}` in `{}`",
+                        String::from_utf8_lossy(x.local_name()),
+                        String::from_utf8_lossy($event.local_name())
+                    );
                 }
                 Err(e) => {
                     return Err(e);
@@ -47,28 +47,28 @@ macro_rules! parse_inner {
 }
 
 macro_rules! parse_inner_impl {
-    ( $x:ident ) => ();
-    ( $x:ident, ) => ();
-    ( $x:ident, $e:ident @ $l:expr => $r:expr ) => (
-        if $x.local_name() == $l {
+    ( $x:ident, $name:expr ) => ();
+    ( $x:ident, $name:expr, ) => ();
+    ( $x:ident, $name:expr, $e:ident @ $l:expr => $r:expr ) => (
+        if $name == $l {
             let $e = $x.clone().into_owned();
             $r;
             continue;
         }
     );
-    ( $x:ident, $l:expr => $r:expr ) => (
-        if $x.local_name() == $l {
+    ( $x:ident, $name:expr, $l:expr => $r:expr ) => (
+        if $name == $l {
             $r;
             continue;
         }
     );
-    ( $x:ident, $e:ident @ $l:expr => $r:expr, $($rest:tt)*) => (
-        parse_inner_impl!( $x, $e @ $l => $r );
-        parse_inner_impl!( $x, $($rest)* );
+    ( $x:ident, $name:expr, $e:ident @ $l:expr => $r:expr, $($rest:tt)*) => (
+        parse_inner_impl!( $x, $name, $e @ $l => $r );
+        parse_inner_impl!( $x, $name, $($rest)* );
     );
-    ( $x:ident, $l:expr => $r:expr, $($rest:tt)*) => (
-        parse_inner_impl!( $x, $l => $r );
-        parse_inner_impl!( $x, $($rest)* );
+    ( $x:ident, $name:expr, $l:expr => $r:expr, $($rest:tt)*) => (
+        parse_inner_impl!( $x, $name, $l => $r );
+        parse_inner_impl!( $x, $name, $($rest)* );
     )
 }
 
@@ -94,14 +94,16 @@ macro_rules! parse_comment {
 // ---------------------------------------------------------------------------
 
 pub(crate) mod utils {
-    use std::collections::HashMap;
     use std::io::BufRead;
     use std::str::FromStr;
 
+    use fnv::FnvHashMap;
     use quick_xml::Reader;
     use quick_xml::Error as XmlError;
     use quick_xml::events::attributes::Attribute;
     use quick_xml::events::BytesStart;
+
+    type HashMap<K, V> = fnv::FnvHashMap<K, V>;
 
     pub(crate) fn attributes_to_hashmap<'a>(event: &'a BytesStart<'a>) -> Result<HashMap<&'a [u8], Attribute<'a>>, XmlError> {
         event.attributes().map(|r| r.map(|a| (a.key, a))).collect()

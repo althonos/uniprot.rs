@@ -3,6 +3,7 @@
 extern crate chrono;
 extern crate quick_xml;
 extern crate url;
+extern crate fnv;
 
 #[macro_use]
 pub mod parser;
