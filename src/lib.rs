@@ -1,9 +1,13 @@
+#![allow(unused_imports)]
+
 extern crate chrono;
 extern crate quick_xml;
 extern crate url;
 
+#[macro_use]
 pub mod parser;
 pub mod model;
+pub mod error;
 
 use std::io::BufRead;
 use self::parser::UniprotParser;
