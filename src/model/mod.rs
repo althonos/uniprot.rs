@@ -8,7 +8,6 @@ use crate::error::Error;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 
-// pub mod comment;
 pub mod comment;
 pub mod db_reference;
 pub mod feature;
@@ -23,6 +22,7 @@ pub mod protein;
 pub mod reference;
 pub mod sequence;
 
+use self::comment::Comment;
 use self::db_reference::DbReference;
 use self::sequence::Sequence;
 use self::feature::Feature;
@@ -53,7 +53,7 @@ pub struct Entry {
     pub organism_hosts: Vec<Organism>,
     pub gene_location: Vec<GeneLocation>,
     pub references: Vec<Reference>,  // minOccurs = 1
-    // pub comments: Vec<Comment>,      // nillable
+    pub comments: Vec<Comment>,      // nillable
     pub db_references: Vec<DbReference>,
     pub protein_existence: ProteinExistence,
     pub keywords: Vec<Keyword>,
@@ -74,7 +74,7 @@ impl Entry {
             organism_hosts: Default::default(),
             gene_location: Default::default(),
             references: Default::default(),
-            // comments: Default::default(),
+            comments: Default::default(),
             db_references: Default::default(),
             protein_existence: Default::default(),
             keywords: Default::default(),
@@ -123,9 +123,9 @@ impl FromXml for Entry {
             e @ b"reference" => {
                 entry.references.push(FromXml::from_xml(&e, reader, buffer)?);
             },
-            // e @ b"comment" => {
-            //     entry.comments.push(self.extract_comment(e)?);
-            // },
+            e @ b"comment" => {
+                entry.comments.push(FromXml::from_xml(&e, reader, buffer)?);
+            },
             e @ b"dbReference" => {
                 entry.db_references.push(FromXml::from_xml(&e, reader, buffer)?);
             },

@@ -1,3 +1,14 @@
+use std::io::BufRead;
+use std::str::FromStr;
+
+use quick_xml::Reader;
+use quick_xml::events::BytesStart;
+
+use crate::error::Error;
+use crate::parser::FromXml;
+use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::get_evidences;
+
 #[derive(Debug, Default, Clone)]
 pub struct AlternativeProduct {
     pub events: Vec<Event>,
@@ -12,6 +23,29 @@ pub enum Event {
     RibosomalFrameshifting,
 }
 
+impl FromXml for Event {
+    fn from_xml<B: BufRead>(
+        event: &BytesStart,
+        _reader: &mut Reader<B>,
+        _buffer: &mut Vec<u8>,
+    ) -> Result<Self, Error> {
+        debug_assert_eq!(event.local_name(), b"event");
+
+        match event.attributes()
+            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"type").unwrap_or_default())
+            .transpose()?
+            .as_ref()
+            .map(|a| &*a.value)
+        {
+            Some(b"alternative splicing") => Ok(Event::AlternativeSplicing),
+            Some(b"alternative initiation") => Ok(Event::AlternativeInitiation),
+            Some(b"alternative promoter") => Ok(Event::AlternativePromoter),
+            Some(b"ribosomal frameshifting") => Ok(Event::RibosomalFrameshifting),
+            Some(other) => panic!("ERR: invalid `type` in `event`: {:?}", other),
+            None => panic!("ERR: missing required `type` in `event`"),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Isoform {
@@ -29,6 +63,48 @@ impl Isoform {
             sequence,
             texts: Default::default(),
         }
+    }
+}
+
+impl FromXml for Isoform {
+    fn from_xml<B: BufRead>(
+        event: &BytesStart,
+        reader: &mut Reader<B>,
+        buffer: &mut Vec<u8>,
+    ) -> Result<Self, Error> {
+        debug_assert_eq!(event.local_name(), b"isoform");
+
+        let mut ids = Vec::new();
+        let mut names = Vec::new();
+        let mut texts = Vec::new();
+        let mut optseq: Option<IsoformSequence> = None;
+
+        parse_inner!{event, reader, buffer,
+            e @ b"id" => {
+                ids.push(reader.read_text(b"id", buffer)?);
+            },
+            e @ b"name" => {
+                names.push(reader.read_text(b"name", buffer)?);
+            },
+            e @ b"text" => {
+                texts.push(reader.read_text(b"text", buffer)?);
+            },
+            e @ b"sequence" => {
+                let seq = FromXml::from_xml(&e, reader, buffer)?;
+                if let Some(_) = optseq.replace(seq) {
+                    panic!("ERR: duplicate `sequence` found in `isoform`");
+                }
+            }
+        }
+
+        let mut isoform = optseq
+            .map(Isoform::new)
+            .expect("ERR: missing required `sequence` element in `isoform`");
+        isoform.names = names;
+        isoform.ids = ids;
+        isoform.texts = texts;
+
+        Ok(isoform)
     }
 }
 
@@ -51,6 +127,37 @@ impl IsoformSequence {
             ty,
             reference: reference.into()
         }
+    }
+}
+
+impl FromXml for IsoformSequence {
+    fn from_xml<B: BufRead>(
+        event: &BytesStart,
+        reader: &mut Reader<B>,
+        buffer: &mut Vec<u8>,
+    ) -> Result<Self, Error> {
+        debug_assert_eq!(event.local_name(), b"sequence");
+
+        use self::IsoformSequenceType::*;
+
+        let attr = attributes_to_hashmap(event)?;
+        let mut seq = match attr.get(&b"type"[..]).map(|x| &*x.value) {
+            Some(b"not described") => IsoformSequence::new(NotDescribed),
+            Some(b"described") => IsoformSequence::new(Described),
+            Some(b"displayed") => IsoformSequence::new(Displayed),
+            Some(b"external") => IsoformSequence::new(External),
+            Some(other) => panic!("ERR: invalid value for `type` in `sequence`: {:?}", other),
+            None => panic!("ERR: missing `type` attribute in `sequence`"),
+        };
+
+        // extract optional reference
+        seq.reference = attr.get(&b"ref"[..])
+            .map(|x| x.unescape_and_decode_value(reader))
+            .transpose()?;
+
+        // read to end
+        reader.read_to_end(b"sequence", buffer)?;
+        Ok(seq)
     }
 }
 

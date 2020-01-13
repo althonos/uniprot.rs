@@ -126,7 +126,7 @@ impl FromXml for ConflictSequence {
             None => panic!("ERR: missing required `resource` in `sequence`"),
         };
 
-        reader.read_to_end(b"sequence", &mut Vec::new());
+        reader.read_to_end(b"sequence", buffer)?;
         Ok(ConflictSequence::with_version(id, resource, version))
     }
 }
