@@ -24,11 +24,11 @@ macro_rules! parse_inner {
                 Ok(Event::Start(ref x)) => {
                     parse_inner_impl!(x, $($rest)*);
                     $reader.read_to_end(x.local_name(), &mut Vec::new())?;
-                    unimplemented!(
-                        "`{}` in `{}`",
-                        String::from_utf8_lossy(x.local_name()),
-                        String::from_utf8_lossy($event.local_name())
-                    );
+                    // unimplemented!(
+                    //     "`{}` in `{}`",
+                    //     String::from_utf8_lossy(x.local_name()),
+                    //     String::from_utf8_lossy($event.local_name())
+                    // );
                 }
                 Err(e) => {
                     return Err(e);
@@ -76,7 +76,6 @@ macro_rules! parse_comment {
     ( $event:ident, $reader:ident, $buffer:ident, $comment:ident ) => {
         parse_comment!{$event, $reader, $buffer, $comment, }
     };
-
     ( $event:ident, $reader:ident, $buffer:ident, $comment:ident, $($rest:tt)* ) => {
         parse_inner!{$event, $reader, $buffer,
             b"text" => {
@@ -89,47 +88,6 @@ macro_rules! parse_comment {
             $($rest)*
         }
     }
-    // ($event:expr, $reader:expr, $buffer:expr, $comment:expr, $($rest:tt)*) => ({
-    //     loop {
-    //         use $crate::quick_xml::events::BytesEnd;
-    //         use $crate::quick_xml::events::BytesStart;
-    //         use $crate::quick_xml::events::Event;
-    //         use $crate::quick_xml::Error as XmlError;
-    //
-    //         $buffer.clear();
-    //         match $reader.read_event($buffer) {
-    //
-    //             Ok(Event::Start(ref x)) if x.local_name() == b"text" => {
-    //                 $comment.text.push($reader.read_text(b"text", $buffer)?);
-    //             },
-    //             Ok(Event::Start(ref x)) if x.local_name() == b"molecule" => {
-    //                 $comment.molecule = Molecule::from_xml(&x, $reader, $buffer)
-    //                     .map(Some)?;
-    //             }
-    //
-    //             Ok(Event::Start(ref x)) => {
-    //                 parse_inner_impl!(x, $($rest)*);
-    //                 $reader.read_to_end(x.local_name(), &mut Vec::new())?;
-    //                 unimplemented!(
-    //                     "`{}` in `{}`",
-    //                     String::from_utf8_lossy(x.local_name()),
-    //                     String::from_utf8_lossy($event.local_name())
-    //                 );
-    //             }
-    //             Err(e) => {
-    //                 return Err(e);
-    //             }
-    //             Ok(Event::Eof) => {
-    //                 let e = String::from_utf8_lossy($event.local_name());
-    //                 return Err(XmlError::UnexpectedEof(e.to_string()));
-    //             }
-    //             Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
-    //                 break;
-    //             }
-    //             _ => continue,
-    //         }
-    //     }
-    // })
 }
 
 
@@ -145,8 +103,14 @@ pub(crate) mod utils {
     use quick_xml::events::attributes::Attribute;
     use quick_xml::events::BytesStart;
 
-    pub(crate) fn attributes_to_hashmap<'a>(b: &'a BytesStart<'a>) -> Result<HashMap<&'a [u8], Attribute<'a>>, XmlError> {
-        b.attributes().map(|r| r.map(|a| (a.key, a))).collect()
+    pub(crate) fn attributes_to_hashmap<'a>(event: &'a BytesStart<'a>) -> Result<HashMap<&'a [u8], Attribute<'a>>, XmlError> {
+        event.attributes().map(|r| r.map(|a| (a.key, a))).collect()
+    }
+
+    pub(crate) fn extract_attribute<'a>(event: &'a BytesStart<'a>, name: &[u8]) -> Result<Option<Attribute<'a>>, XmlError> {
+        event.attributes()
+            .find(|r| r.is_err() || r.as_ref().ok().map_or(false, |a| a.key == name))
+            .transpose()
     }
 
     pub(crate) fn get_evidences<'a, B: BufRead>(reader: &mut Reader<B>, attr: &HashMap<&'a [u8], Attribute<'a>>) -> Result<Vec<usize>, XmlError> {

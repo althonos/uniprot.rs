@@ -27,8 +27,8 @@ impl FromXml for Keyword {
         let attr = attributes_to_hashmap(event)?;
         let mut keyword = Keyword::default();
 
-        keyword.evidence = get_evidences(reader, &attr)?;
         keyword.value = reader.read_text(b"keyword", buffer)?;
+        keyword.evidence = get_evidences(reader, &attr)?;
         keyword.id = attr.get(&b"id"[..])
             .expect("ERR: could not find required `id` on `keyword`")
             .unescape_and_decode_value(reader)?;

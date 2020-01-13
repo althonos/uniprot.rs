@@ -6,8 +6,8 @@ use quick_xml::events::BytesStart;
 
 use crate::error::Error;
 use crate::parser::FromXml;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::extract_attribute;
 
 #[derive(Debug, Clone, Default)]
 /// Describes the names for the protein and parts thereof.
@@ -135,7 +135,10 @@ impl FromXml for ProteinExistence {
         use self::ProteinExistence::*;
 
         reader.read_to_end(event.local_name(), buffer)?;
-        match attributes_to_hashmap(event)?.get(&b"type"[..]).map(|a| &*a.value) {
+        match extract_attribute(event, &b"type"[..])?
+            .as_ref()
+            .map(|a| &*a.value)
+        {
             Some(b"evidence at protein level") => Ok(ProteinLevelEvidence),
             Some(b"evidence at transcript level") => Ok(TranscriptLevelEvidence),
             Some(b"inferred from homology") => Ok(HomologyInferred),

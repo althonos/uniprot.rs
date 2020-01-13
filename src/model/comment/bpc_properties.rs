@@ -6,7 +6,6 @@ use quick_xml::events::BytesStart;
 
 use crate::error::Error;
 use crate::parser::FromXml;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
 
 #[derive(Debug, Default, Clone)]

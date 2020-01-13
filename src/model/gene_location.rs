@@ -7,6 +7,7 @@ use quick_xml::events::BytesStart;
 use crate::error::Error;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
 
 #[derive(Debug, Clone)]
@@ -109,9 +110,11 @@ impl FromXml for LocationName {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"name");
 
-        let attr = attributes_to_hashmap(&event)?;
         let value = reader.read_text(b"name", buffer)?;
-        let status = match attr.get(&b"status"[..]).map(|a| &*a.value) {
+        let status = match extract_attribute(event, &b"status"[..])?
+            .as_ref()
+            .map(|a| &*a.value)
+        {
             Some(b"known") => LocationStatus::Known,
             Some(b"unknown") => LocationStatus::Unknown,
             None => LocationStatus::default(),

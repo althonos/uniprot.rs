@@ -5,6 +5,7 @@ use quick_xml::events::BytesStart;
 
 use crate::error::Error;
 use crate::parser::FromXml;
+use crate::parser::utils::extract_attribute;
 
 #[derive(Debug, Clone)]
 /// Describes a molecule by name or unique identifier.
@@ -21,10 +22,7 @@ impl FromXml for Molecule {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"molecule");
 
-        match event.attributes()
-            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"id").unwrap_or_default())
-            .transpose()?
-        {
+        match extract_attribute(event, &b"type"[..])? {
             None => reader.read_text(b"molecule", buffer).map(Molecule::Name),
             Some(attr) => {
                 reader.read_to_end(b"molecule", buffer)?;

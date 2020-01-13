@@ -7,6 +7,7 @@ use quick_xml::events::BytesStart;
 use crate::error::Error;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
 
 use super::db_reference::DbReference;
@@ -68,10 +69,8 @@ impl FromXml for Name {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"name");
 
-        let attr = attributes_to_hashmap(event)?;
         let value = reader.read_text(b"name", buffer)?;
-
-        match attr.get(&b"type"[..]).map(|a| &*a.value) {
+        match extract_attribute(event, &b"type"[..])?.as_ref().map(|a| &*a.value) {
             Some(b"common") => Ok(Name::Common(value)),
             Some(b"full") => Ok(Name::Full(value)),
             Some(b"scientific") => Ok(Name::Scientific(value)),
