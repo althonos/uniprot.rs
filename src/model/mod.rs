@@ -9,11 +9,13 @@ use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 
 // pub mod comment;
+pub mod comment;
 pub mod db_reference;
 pub mod feature;
 pub mod feature_location;
 pub mod gene;
 pub mod gene_location;
+pub mod keyword;
 pub mod molecule;
 pub mod organism;
 pub mod property;
@@ -21,12 +23,16 @@ pub mod protein;
 pub mod reference;
 pub mod sequence;
 
+use self::db_reference::DbReference;
 use self::sequence::Sequence;
 use self::feature::Feature;
 use self::gene::Gene;
 use self::gene_location::GeneLocation;
 use self::organism::Organism;
 use self::reference::Reference;
+use self::protein::Protein;
+use self::protein::ProteinExistence;
+use self::keyword::Keyword;
 
 #[derive(Debug, Clone)]
 /// A UniProtKB entry.
@@ -41,18 +47,18 @@ pub struct Entry {
     // fields
     pub accessions: Vec<String>,  // minOccurs = 1
     pub names: Vec<String>,       // minOccurs = 1
-    // pub protein: Protein,
+    pub protein: Protein,
     pub genes: Vec<Gene>,
     pub organism: Organism,
     pub organism_hosts: Vec<Organism>,
     pub gene_location: Vec<GeneLocation>,
     pub references: Vec<Reference>,  // minOccurs = 1
     // pub comments: Vec<Comment>,      // nillable
-    // pub db_references: Vec<DbReference>,
-    // pub protein_existence: ProteinExistence,
-    // pub keywords: Vec<Keyword>,
+    pub db_references: Vec<DbReference>,
+    pub protein_existence: ProteinExistence,
+    pub keywords: Vec<Keyword>,
     pub features: Vec<Feature>,
-    // evidence: Vec<Evidence>,
+    // pub evidences: Vec<Evidence>,
     pub sequence: Sequence,
 }
 
@@ -62,16 +68,16 @@ impl Entry {
             dataset,
             accessions: Default::default(),
             names: Default::default(),
-            // protein: Default::default(),
+            protein: Default::default(),
             genes: Default::default(),
             organism: Default::default(),
             organism_hosts: Default::default(),
             gene_location: Default::default(),
             references: Default::default(),
             // comments: Default::default(),
-            // db_references: Default::default(),
-            // protein_existence: Default::default(),
-            // keywords: Default::default(),
+            db_references: Default::default(),
+            protein_existence: Default::default(),
+            keywords: Default::default(),
             features: Default::default(),
             sequence: Default::default(),
         }
@@ -102,7 +108,9 @@ impl FromXml for Entry {
             e @ b"name" => {
                 entry.names.push(reader.read_text(b"name", buffer)?);
             },
-            // e @ b"protein" => entry.protein = self.extract_protein(e)?,
+            e @ b"protein" => {
+                entry.protein = FromXml::from_xml(&e, reader, buffer)?
+            },
             e @ b"gene" => {
                 entry.genes.push(FromXml::from_xml(&e, reader, buffer)?);
             },
@@ -118,22 +126,22 @@ impl FromXml for Entry {
             // e @ b"comment" => {
             //     entry.comments.push(self.extract_comment(e)?);
             // },
-            // e @ b"dbReference" => {
-            //     entry.db_references.push(self.extract_db_reference(e)?);
-            // },
-            // e @ b"proteinExistence" => {
-            //     entry.protein_existence = self.extract_protein_existence(e)?;
-            // },
-            // e @ b"keyword" => {
-            //     entry.keywords.push(self.extract_keyword(e)?);
-            // },
+            e @ b"dbReference" => {
+                entry.db_references.push(FromXml::from_xml(&e, reader, buffer)?);
+            },
+            e @ b"proteinExistence" => {
+                entry.protein_existence = FromXml::from_xml(&e, reader, buffer)?;
+            },
+            e @ b"keyword" => {
+                entry.keywords.push(FromXml::from_xml(&e, reader, buffer)?);
+            },
             e @ b"feature" => {
                 entry.features.push(FromXml::from_xml(&e, reader, buffer)?);
             },
-            // e @ b"evidence" => {
-            //     // println!("TODO `evidence` in `entry`");
-            //     self.xml.read_to_end(b"evidence", &mut buffer)?;
-            // },
+            e @ b"evidence" => {
+                // println!("TODO `evidence` in `entry`");
+                reader.read_to_end(b"evidence", buffer)?;
+            },
             e @ b"sequence" => {
                 entry.sequence = Sequence::from_xml(&e, reader, buffer)?;
             },

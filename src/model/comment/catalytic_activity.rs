@@ -1,3 +1,5 @@
+use super::super::db_reference::DbReference;
+
 #[derive(Debug, Clone)]
 pub struct CatalyticActivity {
     pub reaction: Reaction,
