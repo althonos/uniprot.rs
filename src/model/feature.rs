@@ -65,10 +65,10 @@ impl FromXml for Feature {
                     panic!("ERR: duplicate `location` found in `feature`");
                 }
             },
-            e @ b"original" => {
+            b"original" => {
                 original = reader.read_text(b"original", buffer).map(Some)?;
             },
-            e @ b"variation" => {
+            b"variation" => {
                 variation.push(reader.read_text(b"variation", buffer)?);
             }
         }

@@ -80,13 +80,13 @@ impl FromXml for Isoform {
         let mut optseq: Option<IsoformSequence> = None;
 
         parse_inner!{event, reader, buffer,
-            e @ b"id" => {
+            b"id" => {
                 ids.push(reader.read_text(b"id", buffer)?);
             },
-            e @ b"name" => {
+            b"name" => {
                 names.push(reader.read_text(b"name", buffer)?);
             },
-            e @ b"text" => {
+            b"text" => {
                 texts.push(reader.read_text(b"text", buffer)?);
             },
             e @ b"sequence" => {

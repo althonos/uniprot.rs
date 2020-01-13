@@ -39,19 +39,19 @@ impl FromXml for Disease {
             .unescape_and_decode_value(reader)?;
 
         parse_inner!{event, reader, buffer,
-            e @ b"name" => {
+            b"name" => {
                 let name = reader.read_text(b"name", buffer)?;
                 if let Some(_) = optname.replace(name) {
                     panic!("ERR: duplicate `name` in `disease`");
                 }
             },
-            e @ b"acronym" => {
+            b"acronym" => {
                 let acronym = reader.read_text(b"acronym", buffer)?;
                 if let Some(_) = optacro.replace(acronym) {
                     panic!("ERR: duplicate `acronym` in `disease`");
                 }
             },
-            e @ b"description" => {
+            b"description" => {
                 let description = reader.read_text(b"description", buffer)?;
                 if let Some(_) = optdesc.replace(description) {
                     panic!("ERR: duplicate `description` in `disease`");

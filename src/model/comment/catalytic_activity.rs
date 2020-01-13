@@ -56,7 +56,7 @@ impl FromXml for Reaction {
         let mut opttext = None;
 
         parse_inner!{event, reader, buffer,
-            e @ b"text" => {
+            b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
                 if let Some(_) = opttext.replace(text) {
                     panic!("ERR: duplicate `text` found in `reaction`");

@@ -98,7 +98,7 @@ impl FromXml for Lineage {
 
         let mut lineage = Lineage::default();
         parse_inner!{event, reader, buffer,
-            e @ b"taxon" => {
+            b"taxon" => {
                 lineage.taxons.push(reader.read_text(b"taxon", buffer)?);
             }
         }

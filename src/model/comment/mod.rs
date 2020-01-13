@@ -65,27 +65,6 @@ impl FromXml for Comment {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"comment");
 
-        macro_rules! parse_comment {
-            (
-                $event:expr,
-                $reader:expr,
-                $buffer:expr,
-                $comment:expr
-                $(, $e:ident @ $l:expr => $r:expr )*
-            ) => ({
-                parse_inner!{$event, $reader, $buffer,
-                    $( $e @ $l => $r ,)*
-                    e @ b"text" => {
-                        $comment.text.push($reader.read_text(b"text", $buffer)?);
-                    },
-                    e @ b"molecule" => {
-                        $comment.molecule = Molecule::from_xml(&e, $reader, $buffer)
-                            .map(Some)?;
-                    }
-                }
-            })
-        }
-
         let attr = attributes_to_hashmap(event)?;
         let mut comment = Comment::new(CommentType::Miscellaneous);
         comment.evidences = get_evidences(reader, &attr)?;
@@ -197,12 +176,12 @@ impl FromXml for Comment {
                     e @ b"interactant" => {
                         interactants.push(Interactant::from_xml(&e, reader, buffer)?);
                     },
-                    e @ b"organismsDiffer" => {
+                    b"organismsDiffer" => {
                         let text = reader.read_text(b"organismsDiffer", buffer)?;
                         organisms_differ = bool::from_str(&text)
                             .expect("ERR: could not parse `organismsDiffer` as bool");
                     },
-                    e @ b"experiments" => {
+                    b"experiments" => {
                         let text = reader.read_text(b"experiments", buffer)?;
                         experiments = usize::from_str(&text)
                             .map(Some)
@@ -293,7 +272,7 @@ impl FromXml for Comment {
                     },
                     e @ b"phDependence" => {
                         parse_inner!{e, reader, buffer,
-                            t @ b"text" => {
+                            b"text" => {
                                 let text = reader.read_text(b"text", buffer)?;
                                 bcp.ph_dependence = Some(text);
                             }
@@ -301,7 +280,7 @@ impl FromXml for Comment {
                     },
                     e @ b"redoxPotential" => {
                         parse_inner!{e, reader, buffer,
-                            t @ b"text" => {
+                            b"text" => {
                                 let text = reader.read_text(b"text", buffer)?;
                                 bcp.redox_potential = Some(text);
                             }
@@ -309,7 +288,7 @@ impl FromXml for Comment {
                     },
                     e @ b"temperatureDependence" => {
                         parse_inner!{e, reader, buffer,
-                            t @ b"text" => {
+                            b"text" => {
                                 let text = reader.read_text(b"text", buffer)?;
                                 bcp.temperature_dependence = Some(text);
                             }

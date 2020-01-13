@@ -46,7 +46,7 @@ impl FromXml for Reference {
         let mut optcit = None;
 
         parse_inner!{event, reader, buffer,
-            e @ b"scope" => {
+            b"scope" => {
                 scope.push(reader.read_text(b"scope", buffer)?);
             },
             e @ b"citation" => {
@@ -171,12 +171,12 @@ impl FromXml for Citation {
         parse_inner!{event, reader, buffer,
             e @ b"authorList" => {
                 parse_inner!{e, reader, buffer,
-                    p @ b"person" => {
+                    b"person" => {
                         let p = reader.read_text(b"person", buffer)
                             .map(Person)?;
                         citation.authors.push(p);
                     },
-                    p @ b"consortium" => {
+                    b"consortium" => {
                         let c = reader.read_text(b"consortium", buffer)
                             .map(Consortium)?;
                         citation.authors.push(c);
@@ -185,22 +185,22 @@ impl FromXml for Citation {
             },
             e @ b"editorList" => {
                 parse_inner!{e, reader, buffer,
-                    p @ b"person" => {
+                    b"person" => {
                         let p = reader.read_text(b"person", buffer)
                             .map(Person)?;
                         citation.editors.push(p);
                     },
-                    p @ b"consortium" => {
+                    b"consortium" => {
                         let c = reader.read_text(b"consortium", buffer)
                             .map(Consortium)?;
                         citation.editors.push(c);
                     }
                 }
             },
-            e @ b"title" => {
+            b"title" => {
                 citation.titles.push(reader.read_text(b"title", buffer)?);
             },
-            e @ b"locator" => {
+            b"locator" => {
                 citation.locators.push(reader.read_text(b"locator", buffer)?);
             },
             e @ b"dbReference" => {

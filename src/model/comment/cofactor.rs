@@ -31,7 +31,7 @@ impl FromXml for Cofactor {
         let mut optdbref = None;
 
         parse_inner!{event, reader, buffer,
-            e @ b"name" => {
+            b"name" => {
                 let name = reader.read_text(b"name", buffer)?;
                 if let Some(_) = optname.replace(name) {
                     panic!("ERR: duplicate `name` element in `cofactor`");

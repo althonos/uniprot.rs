@@ -39,23 +39,23 @@ impl FromXml for Protein {
                 // TODO: proper fix to avoid nested `domain` in `component`
                 protein.domains.push(Self::from_xml(&e, reader, buffer)?.name);
             },
-            e @ b"allergenName" => {
+            b"allergenName" => {
                 let value = reader.read_text(b"allergenName", buffer)?;
                 if let Some(_) = protein.name.allergen.replace(value) {
                     panic!("ERR: duplicate `allergen` in `protein`");
                 }
             },
-            e @ b"biotechName" => {
+            b"biotechName" => {
                 let value = reader.read_text(b"biotechName", buffer)?;
                 if let Some(_) = protein.name.biotech.replace(value) {
                     panic!("ERR: duplicate `biotech` in `protein`");
                 }
             },
-            e @ b"cdAntigenName" => {
+            b"cdAntigenName" => {
                 let value = reader.read_text(b"cdAntigenName", buffer)?;
                 protein.name.cd_antigen.push(value);
             },
-            e @ b"innName" => {
+            b"innName" => {
                 let value = reader.read_text(b"innName", buffer)?;
                 protein.name.inn.push(value);
 
@@ -93,13 +93,13 @@ impl FromXml for Name {
         let mut group = Self::default();
 
         parse_inner!{event, reader, buffer,
-            e @ b"fullName" => {
+            b"fullName" => {
                 group.full = reader.read_text(b"fullName", buffer)?;
             },
-            e @ b"shortName" => {
+            b"shortName" => {
                 group.short.push(reader.read_text(b"shortName", buffer)?);
             },
-            e @ b"ecNumber" => {
+            b"ecNumber" => {
                 group.ec_number.push(reader.read_text(b"ecNumber", buffer)?);
             }
         };

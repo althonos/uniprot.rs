@@ -27,13 +27,13 @@ impl FromXml for SubcellularLocation {
 
         let mut subloc = SubcellularLocation::default();
         parse_inner!{event, reader, buffer,
-            e @ b"location" => {
+            b"location" => {
                 subloc.locations.push(reader.read_text(b"location", buffer)?);
             },
-            e @ b"topology" => {
+            b"topology" => {
                 subloc.topologies.push(reader.read_text(b"topology", buffer)?);
             },
-            e @ b"orientation" => {
+            b"orientation" => {
                 subloc.orientations.push(reader.read_text(b"orientation", buffer)?);
             }
         }

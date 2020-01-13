@@ -48,13 +48,13 @@ impl FromXml for Interactant {
             .expect("ERR: could not find required `intactId` attr on `interactant`")?;
 
         parse_inner!{event, reader, buffer,
-            e @ b"id" => {
+            b"id" => {
                 let id = reader.read_text(b"id", buffer)?;
                 if let Some(_) = interactant.id.replace(id) {
                     panic!("ERR: duplicate `id` found in `interactant`");
                 }
             },
-            e @ b"label" => {
+            b"label" => {
                 let label = reader.read_text(b"label", buffer)?;
                 if let Some(_) = interactant.label.replace(label) {
                     panic!("ERR: duplicate `label` found in `interactant`");

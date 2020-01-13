@@ -12,7 +12,7 @@ use super::model::*;
 use super::error::Error;
 
 macro_rules! parse_inner {
-    ($start:expr, $reader:expr, $buffer:expr, $( $e:ident @ $l:expr => $r:expr ),*  ) => ({
+    ($event:expr, $reader:expr, $buffer:expr, $($rest:tt)*) => ({
         loop {
             use $crate::quick_xml::events::BytesEnd;
             use $crate::quick_xml::events::BytesStart;
@@ -21,26 +21,23 @@ macro_rules! parse_inner {
 
             $buffer.clear();
             match $reader.read_event($buffer) {
-                $( Ok(Event::Start(ref e)) if e.local_name() == $l => {
-                    let $e = e.clone().into_owned();
-                    $r
-                }),*
-                Ok(Event::Start(ref e)) => {
-                    $reader.read_to_end(e.local_name(), &mut Vec::new())?;
-                    // unimplemented!(
-                    //     "`{}` in `{}`",
-                    //     String::from_utf8_lossy(e.local_name()),
-                    //     String::from_utf8_lossy($start.local_name())
-                    // );
+                Ok(Event::Start(ref x)) => {
+                    parse_inner_impl!(x, $($rest)*);
+                    $reader.read_to_end(x.local_name(), &mut Vec::new())?;
+                    unimplemented!(
+                        "`{}` in `{}`",
+                        String::from_utf8_lossy(x.local_name()),
+                        String::from_utf8_lossy($event.local_name())
+                    );
                 }
                 Err(e) => {
                     return Err(e);
                 }
                 Ok(Event::Eof) => {
-                    let e = String::from_utf8_lossy($start.local_name());
+                    let e = String::from_utf8_lossy($event.local_name());
                     return Err(XmlError::UnexpectedEof(e.to_string()));
                 }
-                Ok(Event::End(ref e)) if e.local_name() == $start.local_name() => {
+                Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
                     break;
                 }
                 _ => continue,
@@ -48,6 +45,93 @@ macro_rules! parse_inner {
         }
     })
 }
+
+macro_rules! parse_inner_impl {
+    ( $x:ident ) => ();
+    ( $x:ident, ) => ();
+    ( $x:ident, $e:ident @ $l:expr => $r:expr ) => (
+        if $x.local_name() == $l {
+            let $e = $x.clone().into_owned();
+            $r;
+            continue;
+        }
+    );
+    ( $x:ident, $l:expr => $r:expr ) => (
+        if $x.local_name() == $l {
+            $r;
+            continue;
+        }
+    );
+    ( $x:ident, $e:ident @ $l:expr => $r:expr, $($rest:tt)*) => (
+        parse_inner_impl!( $x, $e @ $l => $r );
+        parse_inner_impl!( $x, $($rest)* );
+    );
+    ( $x:ident, $l:expr => $r:expr, $($rest:tt)*) => (
+        parse_inner_impl!( $x, $l => $r );
+        parse_inner_impl!( $x, $($rest)* );
+    )
+}
+
+macro_rules! parse_comment {
+    ( $event:ident, $reader:ident, $buffer:ident, $comment:ident ) => {
+        parse_comment!{$event, $reader, $buffer, $comment, }
+    };
+
+    ( $event:ident, $reader:ident, $buffer:ident, $comment:ident, $($rest:tt)* ) => {
+        parse_inner!{$event, $reader, $buffer,
+            b"text" => {
+                $comment.text.push($reader.read_text(b"text", $buffer)?);
+            },
+            m @ b"molecule" => {
+                $comment.molecule = Molecule::from_xml(&m, $reader, $buffer)
+                    .map(Some)?;
+            },
+            $($rest)*
+        }
+    }
+    // ($event:expr, $reader:expr, $buffer:expr, $comment:expr, $($rest:tt)*) => ({
+    //     loop {
+    //         use $crate::quick_xml::events::BytesEnd;
+    //         use $crate::quick_xml::events::BytesStart;
+    //         use $crate::quick_xml::events::Event;
+    //         use $crate::quick_xml::Error as XmlError;
+    //
+    //         $buffer.clear();
+    //         match $reader.read_event($buffer) {
+    //
+    //             Ok(Event::Start(ref x)) if x.local_name() == b"text" => {
+    //                 $comment.text.push($reader.read_text(b"text", $buffer)?);
+    //             },
+    //             Ok(Event::Start(ref x)) if x.local_name() == b"molecule" => {
+    //                 $comment.molecule = Molecule::from_xml(&x, $reader, $buffer)
+    //                     .map(Some)?;
+    //             }
+    //
+    //             Ok(Event::Start(ref x)) => {
+    //                 parse_inner_impl!(x, $($rest)*);
+    //                 $reader.read_to_end(x.local_name(), &mut Vec::new())?;
+    //                 unimplemented!(
+    //                     "`{}` in `{}`",
+    //                     String::from_utf8_lossy(x.local_name()),
+    //                     String::from_utf8_lossy($event.local_name())
+    //                 );
+    //             }
+    //             Err(e) => {
+    //                 return Err(e);
+    //             }
+    //             Ok(Event::Eof) => {
+    //                 let e = String::from_utf8_lossy($event.local_name());
+    //                 return Err(XmlError::UnexpectedEof(e.to_string()));
+    //             }
+    //             Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
+    //                 break;
+    //             }
+    //             _ => continue,
+    //         }
+    //     }
+    // })
+}
+
 
 // ---------------------------------------------------------------------------
 

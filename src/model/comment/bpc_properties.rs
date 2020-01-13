@@ -35,19 +35,19 @@ impl FromXml for Absorption {
 
         let mut absorption = Absorption::default();
         parse_inner!{event, reader, buffer,
-            e @ b"max" => {
+            b"max" => {
                 let max = reader.read_text(b"max", buffer)?;
                 if let Some(_) = absorption.max.replace(max) {
                     panic!("ERR: duplicate `max` in `absorption`");
                 }
             },
-            e @ b"min" => {
+            b"min" => {
                 let min = reader.read_text(b"min", buffer)?;
                 if let Some(_) = absorption.min.replace(min) {
                     panic!("ERR: duplicate `min` in `absorption`");
                 }
             },
-            e @ b"text" => {
+            b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
                 if let Some(_) = absorption.text.replace(text) {
                     panic!("ERR: duplicate `text` in `absorption`");
@@ -76,13 +76,13 @@ impl FromXml for Kinetics {
 
         let mut kinetics = Kinetics::default();
         parse_inner!{event, reader, buffer,
-            e @ b"KM" => {
+            b"KM" => {
                 kinetics.km.push(reader.read_text(b"KM", buffer)?);
             },
-            e @ b"Vmax" => {
+            b"Vmax" => {
                 kinetics.vmax.push(reader.read_text(b"Vmax", buffer)?);
             },
-            e @ b"text" => {
+            b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
                 if let Some(_) = kinetics.text.replace(text) {
                     panic!("ERR: duplicate `text` in `kinetics`");

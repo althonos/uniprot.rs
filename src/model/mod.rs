@@ -96,16 +96,16 @@ impl FromXml for Entry {
         let dataset = match attr.get(&b"dataset"[..]).map(|a| &*a.value) {
             Some(b"Swiss-Prot") => Dataset::SwissProt,
             Some(b"TrEMBL") => Dataset::TrEmbl,
-            Some(other) => panic!("ERR: invalid value for `dataset` attribute of `entry`"),
+            Some(other) => panic!("ERR: invalid value for `dataset` attribute of `entry`: {:?}", other),
             None => panic!("ERR: missing required `dataset` attribute of `entry`"),
         };
 
         let mut entry = Entry::new(dataset);
         parse_inner!{event, reader, buffer,
-            e @ b"accession" => {
+            b"accession" => {
                 entry.accessions.push(reader.read_text(b"accession", buffer)?);
             },
-            e @ b"name" => {
+            b"name" => {
                 entry.names.push(reader.read_text(b"name", buffer)?);
             },
             e @ b"protein" => {
@@ -138,7 +138,7 @@ impl FromXml for Entry {
             e @ b"feature" => {
                 entry.features.push(FromXml::from_xml(&e, reader, buffer)?);
             },
-            e @ b"evidence" => {
+            b"evidence" => {
                 // println!("TODO `evidence` in `entry`");
                 reader.read_to_end(b"evidence", buffer)?;
             },
