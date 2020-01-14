@@ -33,33 +33,28 @@ impl FromXml for Sequence {
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| usize::from_str(&x))
-            .expect("ERR: could not find required `length` in `sequence`")
-            .expect("ERR: could not parse `length` as usize");
+            .ok_or(Error::MissingAttribute("length", "sequence"))??;
         let mass = attr.get(&b"mass"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| usize::from_str(&x))
-            .expect("ERR: could not find required `mass` in `sequence`")
-            .expect("ERR: could not parse `mass` as usize");
+            .ok_or(Error::MissingAttribute("mass", "sequence"))??;
         let checksum = attr.get(&b"checksum"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| u64::from_str_radix(&x, 16))
-            .expect("ERR: could not find required `checksum` in `sequence`")
-            .expect("ERR: could not parse `checksum` as hex u64");
+            .ok_or(Error::MissingAttribute("checksum", "sequence"))??;
         // let modified = TODO
         let version = attr.get(&b"version"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| usize::from_str(&x))
-            .expect("ERR: could not find required `version` in `sequence`")
-            .expect("ERR: could not parse `version` as usize");
+            .ok_or(Error::MissingAttribute("version", "sequence"))??;
         let precursor = attr.get(&b"precursor"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| bool::from_str(&x))
-            .transpose()
-            .expect("ERR: could not parse `precursor` as bool");
+            .transpose()?;
         let fragment = match attr.get(&b"fragment"[..]).map(|x| &*x.value) {
             Some(b"single") => Some(FragmentType::Single),
             Some(b"multiple") => Some(FragmentType::Multiple),

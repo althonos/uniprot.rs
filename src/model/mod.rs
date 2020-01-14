@@ -98,7 +98,7 @@ impl Entry {
             Some(b"Swiss-Prot") => Dataset::SwissProt,
             Some(b"TrEMBL") => Dataset::TrEmbl,
             Some(other) => panic!("ERR: invalid value for `dataset` attribute of `entry`: {:?}", other),
-            None => panic!("ERR: missing required `dataset` attribute of `entry`"),
+            None => return Err(Error::MissingAttribute("dataset", "entry")),
         };
 
         let mut entry = Entry::new(dataset);

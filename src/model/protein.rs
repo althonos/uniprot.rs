@@ -42,13 +42,13 @@ impl FromXml for Protein {
             b"allergenName" => {
                 let value = reader.read_text(b"allergenName", buffer)?;
                 if let Some(_) = protein.name.allergen.replace(value) {
-                    panic!("ERR: duplicate `allergen` in `protein`");
+                    return Err(Error::DuplicateElement("allergen", "protein"));
                 }
             },
             b"biotechName" => {
                 let value = reader.read_text(b"biotechName", buffer)?;
                 if let Some(_) = protein.name.biotech.replace(value) {
-                    panic!("ERR: duplicate `biotech` in `protein`");
+                    return Err(Error::DuplicateElement("biotech", "protein"));
                 }
             },
             b"cdAntigenName" => {
@@ -145,7 +145,7 @@ impl FromXml for ProteinExistence {
             Some(b"predicted") => Ok(Predicted),
             Some(b"uncertain") => Ok(Uncertain),
             Some(other) => panic!("ERR: invalid `type` in `proteinExistence`: {:?}", other),
-            None => panic!("ERR: could not find required `type` on `proteinExistence`"),
+            None => return Err(Error::MissingAttribute("type", "proteinExistence")),
         }
     }
 }

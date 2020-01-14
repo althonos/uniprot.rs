@@ -31,10 +31,10 @@ impl FromXml for Property {
         reader.read_to_end(b"property", buffer)?;
 
         let ty = attr.get(&b"type"[..])
-            .expect("ERR: could not find required `type` on `property` element")
+            .ok_or(Error::MissingAttribute("type", "property"))?
             .unescape_and_decode_value(reader)?;
         let value = attr.get(&b"value"[..])
-            .expect("ERR: could not find required `value` on `property` element")
+            .ok_or(Error::MissingAttribute("value", "property"))?
             .unescape_and_decode_value(reader)?;
 
         Ok(Property::new(ty, value))

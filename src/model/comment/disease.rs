@@ -35,42 +35,42 @@ impl FromXml for Disease {
 
         let id = event.attributes()
             .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"id").unwrap_or_default())
-            .expect("ERR: could not find required `id` attr on `disease`")?
+            .ok_or(Error::MissingAttribute("id", "disease"))??
             .unescape_and_decode_value(reader)?;
 
         parse_inner!{event, reader, buffer,
             b"name" => {
                 let name = reader.read_text(b"name", buffer)?;
                 if let Some(_) = optname.replace(name) {
-                    panic!("ERR: duplicate `name` in `disease`");
+                    return Err(Error::DuplicateElement("name", "disease"));
                 }
             },
             b"acronym" => {
                 let acronym = reader.read_text(b"acronym", buffer)?;
                 if let Some(_) = optacro.replace(acronym) {
-                    panic!("ERR: duplicate `acronym` in `disease`");
+                    return Err(Error::DuplicateElement("acronym", "disease"));
                 }
             },
             b"description" => {
                 let description = reader.read_text(b"description", buffer)?;
                 if let Some(_) = optdesc.replace(description) {
-                    panic!("ERR: duplicate `description` in `disease`");
+                    return Err(Error::DuplicateElement("description", "disease"));
                 }
             },
             e @ b"dbReference" => {
                 let db_reference = FromXml::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optdbref.replace(db_reference) {
-                    panic!("ERR: duplicate `db_reference` in `disease`");
+                    return Err(Error::DuplicateElement("dbReference", "disease"));
                 }
             }
         }
 
         Ok(Disease {
             id,
-            name: optname.expect("ERR: missing `name` in `disease`"),
-            description: optdesc.expect("ERR: missing `description` in `disease`"),
-            acronym: optacro.expect("ERR: missing `acronym` in `disease`"),
-            db_reference: optdbref.expect("ERR: missing `db_reference` in `disease`"),
+            name: optname.ok_or(Error::MissingElement("name", "disease"))?,
+            description: optdesc.ok_or(Error::MissingElement("description", "disease"))?,
+            acronym: optacro.ok_or(Error::MissingElement("acronym", "disease"))?,
+            db_reference: optdbref.ok_or(Error::MissingElement("dbReference", "disease"))?,
         })
 
     }

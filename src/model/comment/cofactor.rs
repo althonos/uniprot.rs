@@ -34,19 +34,19 @@ impl FromXml for Cofactor {
             b"name" => {
                 let name = reader.read_text(b"name", buffer)?;
                 if let Some(_) = optname.replace(name) {
-                    panic!("ERR: duplicate `name` element in `cofactor`");
+                    return Err(Error::DuplicateElement("name", "cofactor"));
                 }
             },
             e @ b"dbReference" => {
                 let dbref = FromXml::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optdbref.replace(dbref) {
-                    panic!("ERR: duplicate `dbReference` in `cofactor`")
+                    return Err(Error::DuplicateElement("dbReference", "cofactor"));
                 }
             }
         }
 
-        let name = optname.expect("ERR: missing required `name` in `cofactor`");
-        let db_reference = optdbref.expect("ERR: missing required `dbReference` in `cofactor`");
+        let name = optname.ok_or(Error::MissingElement("name", "cofactor"))?;
+        let db_reference = optdbref.ok_or(Error::MissingElement("dbReference", "cofactor"))?;
         let evidences = get_evidences(reader, &attr)?;
 
         Ok(Cofactor { name, db_reference, evidences })

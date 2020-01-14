@@ -43,21 +43,20 @@ impl FromXml for Interactant {
 
         let mut interactant = event.attributes()
             .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"intactId").unwrap_or_default())
-            .transpose()?
-            .map(|a| a.unescape_and_decode_value(reader).map(Interactant::new))
-            .expect("ERR: could not find required `intactId` attr on `interactant`")?;
+            .ok_or(Error::MissingAttribute("intactId", "Interactant"))?
+            .and_then(|a| a.unescape_and_decode_value(reader).map(Interactant::new))?;
 
         parse_inner!{event, reader, buffer,
             b"id" => {
                 let id = reader.read_text(b"id", buffer)?;
                 if let Some(_) = interactant.id.replace(id) {
-                    panic!("ERR: duplicate `id` found in `interactant`");
+                    return Err(Error::DuplicateElement("id", "interaction"));
                 }
             },
             b"label" => {
                 let label = reader.read_text(b"label", buffer)?;
                 if let Some(_) = interactant.label.replace(label) {
-                    panic!("ERR: duplicate `label` found in `interactant`");
+                    return Err(Error::DuplicateElement("label", "interaction"));
                 }
             }
         }

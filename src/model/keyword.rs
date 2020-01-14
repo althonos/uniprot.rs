@@ -30,7 +30,7 @@ impl FromXml for Keyword {
         keyword.value = reader.read_text(b"keyword", buffer)?;
         keyword.evidence = get_evidences(reader, &attr)?;
         keyword.id = attr.get(&b"id"[..])
-            .expect("ERR: could not find required `id` on `keyword`")
+            .ok_or(Error::MissingAttribute("id", "keyword"))?
             .unescape_and_decode_value(reader)?;
 
         Ok(keyword)

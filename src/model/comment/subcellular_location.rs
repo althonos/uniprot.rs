@@ -38,7 +38,7 @@ impl FromXml for SubcellularLocation {
         }
 
         if subloc.locations.is_empty() {
-            panic!("ERR: missing required `location` in `subcellularLocation`");
+            return Err(Error::MissingElement("location", "SubcellularLocation"));
         }
 
         Ok(subloc)

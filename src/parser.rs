@@ -32,11 +32,11 @@ macro_rules! parse_inner {
                     );
                 }
                 Err(e) => {
-                    return Err(e);
+                    return Err(Error::from(e));
                 }
                 Ok(Event::Eof) => {
-                    let e = String::from_utf8_lossy($event.local_name());
-                    return Err(XmlError::UnexpectedEof(e.to_string()));
+                    let e = String::from_utf8_lossy($event.local_name()).to_string();
+                    return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
                 Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
                     break;
@@ -72,11 +72,11 @@ macro_rules! parse_inner_ignoring {
                     );
                 }
                 Err(e) => {
-                    return Err(e);
+                    return Err(Error::from(e));
                 }
                 Ok(Event::Eof) => {
-                    let e = String::from_utf8_lossy($event.local_name());
-                    return Err(XmlError::UnexpectedEof(e.to_string()));
+                    let e = String::from_utf8_lossy($event.local_name()).to_string();
+                    return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
                 Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
                     break;
@@ -144,26 +144,29 @@ pub(crate) mod utils {
     use quick_xml::events::attributes::Attribute;
     use quick_xml::events::BytesStart;
 
+    use super::Error;
+
     type HashMap<K, V> = fnv::FnvHashMap<K, V>;
 
-    pub(crate) fn attributes_to_hashmap<'a>(event: &'a BytesStart<'a>) -> Result<HashMap<&'a [u8], Attribute<'a>>, XmlError> {
-        event.attributes().map(|r| r.map(|a| (a.key, a))).collect()
+    pub(crate) fn attributes_to_hashmap<'a>(event: &'a BytesStart<'a>) -> Result<HashMap<&'a [u8], Attribute<'a>>, Error> {
+        event.attributes()
+            .map(|r| r.map(|a| (a.key, a)).map_err(Error::from))
+            .collect()
     }
 
-    pub(crate) fn extract_attribute<'a>(event: &'a BytesStart<'a>, name: &[u8]) -> Result<Option<Attribute<'a>>, XmlError> {
+    pub(crate) fn extract_attribute<'a>(event: &'a BytesStart<'a>, name: &[u8]) -> Result<Option<Attribute<'a>>, Error> {
         event.attributes()
             .find(|r| r.is_err() || r.as_ref().ok().map_or(false, |a| a.key == name))
             .transpose()
+            .map_err(Error::from)
     }
 
-    pub(crate) fn get_evidences<'a, B: BufRead>(reader: &mut Reader<B>, attr: &HashMap<&'a [u8], Attribute<'a>>) -> Result<Vec<usize>, XmlError> {
-        Ok(attr.get(&b"evidence"[..])
+    pub(crate) fn get_evidences<'a, B: BufRead>(reader: &mut Reader<B>, attr: &HashMap<&'a [u8], Attribute<'a>>) -> Result<Vec<usize>, Error> {
+        attr.get(&b"evidence"[..])
             .map(|a| a.unescape_and_decode_value(reader))
             .transpose()?
-            .map(|e| e.split(' ').map(usize::from_str).collect::<Result<Vec<_>, _>>())
-            .transpose()
-            .expect("ERR: could not decode evidence number")
-            .unwrap_or_default())
+            .map(|e| e.split(' ').map(usize::from_str).collect::<Result<Vec<_>, _>>().map_err(Error::from))
+            .unwrap_or_else(|| Ok(Vec::new()))
     }
 }
 
@@ -212,10 +215,10 @@ impl<B: BufRead> UniprotParser<B> {
             buffer.clear();
             match xml.read_event(&mut buffer) {
                 Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break None,
-                Err(e) => break Some(Err(e)),
+                Err(e) => break Some(Err(Error::from(e))),
                 Ok(Event::Eof) => {
                     let e = String::from("xml");
-                    break Some(Err(XmlError::UnexpectedEof(e)));
+                    break Some(Err(Error::from(XmlError::UnexpectedEof(e))));
                 }
                 _ => (),
             }
@@ -232,7 +235,7 @@ impl<B: BufRead> UniprotParser<B> {
 }
 
 impl<B: BufRead> Iterator for UniprotParser<B> {
-    type Item = Result<Entry, XmlError>;
+    type Item = Result<Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         // return cached item if any
         if let Some(item) = self.cache.take() {
@@ -249,12 +252,12 @@ impl<B: BufRead> Iterator for UniprotParser<B> {
             self.buffer.clear();
             match self.xml.read_event(&mut self.buffer) {
                 // if an error is raised, return it
-                Err(e) => return Some(Err(e)),
+                Err(e) => return Some(Err(Error::from(e))),
                 // error if reaching EOF
                 Ok(Event::Eof) => {
                     let e = String::from("entry");
                     self.finished = true;
-                    return Some(Err(XmlError::UnexpectedEof(e)));
+                    return Some(Err(Error::from(XmlError::UnexpectedEof(e))));
                 }
                 // if end of `uniprot` is reached, return no further item
                 Ok(Event::End(ref e)) if e.local_name() == b"uniprot" => {

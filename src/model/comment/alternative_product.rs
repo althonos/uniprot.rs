@@ -42,7 +42,7 @@ impl FromXml for Event {
             Some(b"alternative promoter") => Ok(Event::AlternativePromoter),
             Some(b"ribosomal frameshifting") => Ok(Event::RibosomalFrameshifting),
             Some(other) => panic!("ERR: invalid `type` in `event`: {:?}", other),
-            None => panic!("ERR: missing required `type` in `event`"),
+            None => return Err(Error::MissingAttribute("type", "event")),
         }
     }
 }
@@ -92,14 +92,14 @@ impl FromXml for Isoform {
             e @ b"sequence" => {
                 let seq = FromXml::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optseq.replace(seq) {
-                    panic!("ERR: duplicate `sequence` found in `isoform`");
+                    return Err(Error::DuplicateElement("sequence", "isoform"));
                 }
             }
         }
 
         let mut isoform = optseq
             .map(Isoform::new)
-            .expect("ERR: missing required `sequence` element in `isoform`");
+            .ok_or(Error::MissingElement("sequence", "isoform"))?;
         isoform.names = names;
         isoform.ids = ids;
         isoform.texts = texts;
@@ -147,7 +147,7 @@ impl FromXml for IsoformSequence {
             Some(b"displayed") => IsoformSequence::new(Displayed),
             Some(b"external") => IsoformSequence::new(External),
             Some(other) => panic!("ERR: invalid value for `type` in `sequence`: {:?}", other),
-            None => panic!("ERR: missing `type` attribute in `sequence`"),
+            None => return Err(Error::MissingAttribute("type", "sequence")),
         };
 
         // extract optional reference

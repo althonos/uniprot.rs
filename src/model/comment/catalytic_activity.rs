@@ -59,7 +59,7 @@ impl FromXml for Reaction {
             b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
                 if let Some(_) = opttext.replace(text) {
-                    panic!("ERR: duplicate `text` found in `reaction`");
+                    return Err(Error::DuplicateElement("text", "reaction"));
                 }
             },
             e @ b"dbReference" => {
@@ -68,7 +68,7 @@ impl FromXml for Reaction {
         }
 
         let mut reaction = opttext.map(Reaction::new)
-            .expect("ERR: could not find required `text` in `reaction`");
+            .ok_or(Error::MissingAttribute("text", "reaction"))?;
         reaction.db_references = db_references;
         reaction.evidences = get_evidences(reader, &attr)?;
 
@@ -100,7 +100,7 @@ impl FromXml for PhysiologicalReaction {
             Some(b"left-to-right") => LeftToRight,
             Some(b"right-to-left")=> RightToLeft,
             Some(other) => panic!("ERR: invalid `direction` for `physiologicalReaction`: {:?}", other),
-            None => panic!("ERR: missing required `direction` for `physiologicalReaction`")
+            None => return Err(Error::MissingAttribute("direction", "PhysiologicalReaction")),
         };
 
         let mut optdbref = None;
@@ -108,13 +108,13 @@ impl FromXml for PhysiologicalReaction {
             e @ b"dbReference" => {
                 let dbref = FromXml::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optdbref.replace(dbref) {
-                    panic!("ERR: duplicate `dbReference` found in `reaction`");
+                    return Err(Error::DuplicateElement("dbReference", "reaction"));
                 }
             }
         }
 
         let db_reference = optdbref
-            .expect("ERR: could not find required `dbReference` in `physiologicalReaction`");
+            .ok_or(Error::MissingAttribute("dbReference", "PhysiologicalReaction"))?;
         Ok(PhysiologicalReaction { db_reference, direction, evidences })
     }
 }

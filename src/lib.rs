@@ -1,6 +1,5 @@
 #![allow(unused_imports)]
 
-extern crate chrono;
 extern crate bytes;
 extern crate quick_xml;
 extern crate url;

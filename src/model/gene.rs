@@ -72,7 +72,8 @@ impl FromXml for Name {
             Some(b"synonym") => NameType::Synonym,
             Some(b"ordered locus") => NameType::OrderedLocus,
             Some(b"ORF") => NameType::Orf,
-            _ => panic!("ERR: invalid or missing value for `type` in `name`"),
+            Some(other) => panic!("ERR: invalid value for `type` in `name`: {:?}", other),
+            None => return Err(Error::MissingAttribute("type", "name")),
         };
 
         Ok(Self::new_with_evidence(name, ty, evidence))

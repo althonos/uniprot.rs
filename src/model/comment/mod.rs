@@ -178,20 +178,19 @@ impl FromXml for Comment {
                     },
                     b"organismsDiffer" => {
                         let text = reader.read_text(b"organismsDiffer", buffer)?;
-                        organisms_differ = bool::from_str(&text)
-                            .expect("ERR: could not parse `organismsDiffer` as bool");
+                        organisms_differ = bool::from_str(&text)?;
                     },
                     b"experiments" => {
                         let text = reader.read_text(b"experiments", buffer)?;
-                        experiments = usize::from_str(&text)
-                            .map(Some)
-                            .expect("ERR: could not parse `experiments` as usize");
+                        experiments = usize::from_str(&text).map(Some)?;
                     }
                 }
 
                             // check that we have 2 interactants
-                let i2 = interactants.pop().expect("ERR: missing `interactant` in `interaction`");
-                let i1 = interactants.pop().expect("ERR: missing `interactant` in `interaction`");
+                let i2 = interactants.pop()
+                    .ok_or(Error::MissingElement("interactant", "interaction"))?;
+                let i1 = interactants.pop()
+                    .ok_or(Error::MissingElement("interactant", "interaction"))?;
                 if !interactants.is_empty() {
                     panic!("ERR: too many `interactant` in `interaction`");
                 }
@@ -199,9 +198,9 @@ impl FromXml for Comment {
                 // create new interaction
                 comment.ty = CommentType::Interaction(Interaction {
                     organisms_differ,
-                    experiments: experiments
-                        .expect("ERR: missing `experiments` in `interaction`"),
                     interactants: (i1, i2),
+                    experiments: experiments
+                        .ok_or(Error::MissingElement("experiments", "interaction"))?,
                 });
             }
 
@@ -213,14 +212,14 @@ impl FromXml for Comment {
                     e @ b"conflict" => {
                         let conflict = FromXml::from_xml(&e, reader, buffer)?;
                         if let Some(_) = optconflict.replace(conflict) {
-                            panic!("ERR: duplicate `conflict` in `sequence caution`")
+                            return Err(Error::DuplicateElement("conflict", "comment"));
                         }
                     }
                 }
 
                 // check a `conflict` was extracted
                 comment.ty = optconflict.map(CommentType::SequenceCaution)
-                    .expect("ERR: missing `conflict` in `sequence caution`");
+                    .ok_or(Error::MissingElement("conflict", "sequence caution"))?
             }
 
             Some(b"mass spectrometry") => {
@@ -248,7 +247,7 @@ impl FromXml for Comment {
                     e @ b"disease" => {
                         let disease = FromXml::from_xml(&e, reader, buffer)?;
                         if let Some(_) = optdisease.replace(disease) {
-                            panic!("ERR: duplicate `disease` in `comment`")
+                            return Err(Error::DuplicateElement("disease", "comment"));
                         }
                     }
                 }
@@ -261,13 +260,13 @@ impl FromXml for Comment {
                     e @ b"absorption" => {
                         let absorption = FromXml::from_xml(&e, reader, buffer)?;
                         if let Some(_) = bcp.absorption.replace(absorption) {
-                            panic!("ERR: duplicate `absorption` in `comment`")
+                            return Err(Error::DuplicateElement("absorption", "comment"));
                         }
                     },
                     e @ b"kinetics" => {
                         let kinetics = FromXml::from_xml(&e, reader, buffer)?;
                         if let Some(_) = bcp.kinetics.replace(kinetics) {
-                            panic!("ERR: duplicate `kinetics` in `comment`")
+                            return Err(Error::DuplicateElement("kinetics", "comment"));
                         }
                     },
                     e @ b"phDependence" => {
@@ -306,7 +305,7 @@ impl FromXml for Comment {
                     e @ b"reaction" => {
                         let reaction = FromXml::from_xml(&e, reader, buffer)?;
                         if let Some(_) = optreact.replace(reaction) {
-                            panic!("ERR: duplicate `reaction` in `comment`")
+                            return Err(Error::DuplicateElement("reaction", "comment"));
                         }
                     },
                     e @ b"physiologicalReaction" => {
@@ -315,7 +314,7 @@ impl FromXml for Comment {
                 }
 
                 let mut act = optreact.map(CatalyticActivity::new)
-                    .expect("ERR: could not find required `reaction` in `comment`");
+                    .ok_or(Error::MissingElement("reaction", "comment"))?;
 
                 if physio.len() > 2 {
                     panic!("ERR: too many `physiologicalReaction` found in `comment`")
@@ -338,8 +337,7 @@ impl FromXml for Comment {
                             .map(|a| a.unescape_and_decode_value(reader))
                             .transpose()?
                             .map(|s| url::Url::parse(&s))
-                            .expect("ERR: could not find required `uri` on `link`")
-                            .expect("ERR: could not parse `uri` as url::Url");
+                            .ok_or(Error::MissingElement("uri", "link"))??;
                         info.links.push(uri);
                         reader.read_to_end(b"link", buffer)?;
                     }
@@ -369,7 +367,7 @@ impl FromXml for Comment {
             }
 
             Some(other) => panic!("unknown `type` in `comment`: {:?}", String::from_utf8_lossy(other)),
-            None => panic!("could not find required `type` attribute on `comment`"),
+            None => return Err(Error::MissingAttribute("type", "comment")),
         }
 
         Ok(comment)

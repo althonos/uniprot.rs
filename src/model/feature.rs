@@ -62,7 +62,7 @@ impl FromXml for Feature {
             e @ b"location" => {
                 let loc = FeatureLocation::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optloc.replace(loc) {
-                    panic!("ERR: duplicate `location` found in `feature`");
+                    return Err(Error::DuplicateElement("location", "feature"));
                 }
             },
             b"original" => {
@@ -75,9 +75,9 @@ impl FromXml for Feature {
 
         // assume the location was found and extract the feature type
         let location = optloc
-            .expect("ERR: could not find required `location` in `feature`");
+            .ok_or(Error::MissingAttribute("location", "feature"))?;
         let mut feature = match attr.get(&b"type"[..]).map(|a| &*a.value)
-            .expect("ERR: could not find required `type` attr from `feature`")
+            .ok_or(Error::MissingAttribute("type", "feature"))?
         {
             b"active site" => Feature::new(ActiveSite, location),
             b"binding site" => Feature::new(BindingSite, location),

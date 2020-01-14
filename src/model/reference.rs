@@ -52,7 +52,7 @@ impl FromXml for Reference {
             e @ b"citation" => {
                 let citation = FromXml::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optcit.replace(citation) {
-                    panic!("ERR: duplicate `citation` in `reference`");
+                    return Err(Error::DuplicateElement("citation", "reference"));
                 }
             },
             e @ b"source" => {
@@ -60,19 +60,15 @@ impl FromXml for Reference {
             }
         }
 
-        let citation = optcit
-            .expect("ERR: could not find required `citation` in `reference`");
+        let citation = optcit.ok_or(Error::MissingAttribute("citation", "reference"))?;
         let mut reference = Reference::new(citation, 0);
 
         let attr = attributes_to_hashmap(event)?;
         reference.evidences = get_evidences(reader, &attr)?;
         reference.key = attr.get(&b"key"[..])
             .map(|a| a.unescape_and_decode_value(reader))
-            .transpose()?
-            .map(|x| usize::from_str(&x))
-            .transpose()
-            .expect("ERR: could not decode key number")
-            .expect("ERR: could not get `key` attribute from `reference`");
+            .ok_or(Error::MissingAttribute("key", "reference"))?
+            .map(|x| usize::from_str(&x))??;
 
         Ok(reference)
     }
@@ -143,17 +139,16 @@ impl FromXml for Citation {
         let attr = attributes_to_hashmap(event)?;
 
         // get citation type
-        let ty = match attr.get(&b"type"[..]).map(|a| &*a.value)
-            .expect("ERR: cannot find required `type` in `citation`")
-        {
-            b"book" => Book,
-            b"journal article" => JournalArticle,
-            b"online journal article" => OnlineJournalArticle,
-            b"patent" => Patent,
-            b"submission" => Submission,
-            b"thesis" => Thesis,
-            b"unpublished observations" => UnpublishedObservations,
-            other => panic!("ERR: invalid `type` in `citation`: {:?}", other),
+        let ty = match attr.get(&b"type"[..]).map(|a| &*a.value) {
+            Some(b"book") => Book,
+            Some(b"journal article") => JournalArticle,
+            Some(b"online journal article") => OnlineJournalArticle,
+            Some(b"patent") => Patent,
+            Some(b"submission") => Submission,
+            Some(b"thesis") => Thesis,
+            Some(b"unpublished observations") => UnpublishedObservations,
+            Some(other) => panic!("ERR: invalid `type` in `citation`: {:?}", other),
+            None => return Err(Error::MissingAttribute("type", "citation")),
         };
 
         // create the citation

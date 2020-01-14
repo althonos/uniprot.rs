@@ -31,19 +31,19 @@ impl FromXml for FeatureLocation {
             e @ b"begin" => {
                 let pos = Position::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optbegin.replace(pos) {
-                    panic!("ERR: duplicate `begin` found in `location`");
+                    return Err(Error::DuplicateElement("begin", "location"));
                 }
             },
             e @ b"end" => {
                 let pos = Position::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optend.replace(pos) {
-                    panic!("ERR: duplicate `end` found in `location`")
+                    return Err(Error::DuplicateElement("end", "location"));
                 }
             },
             e @ b"position" => {
                 let pos = Position::from_xml(&e, reader, buffer)?;
                 if let Some(_) = optposition.replace(pos) {
-                    panic!("ERR: duplicate `position` found in `location`")
+                    return Err(Error::DuplicateElement("position", "location"));
                 }
             }
         }
@@ -54,8 +54,8 @@ impl FromXml for FeatureLocation {
             }
             Ok(FeatureLocation::Position(pos))
         } else {
-            let begin = optbegin.expect("ERR: could not find `begin` in `location`");
-            let end = optend.expect("ERR: could not find `end` in `location`");
+            let begin = optbegin.ok_or(Error::MissingElement("begin", "location"))?;
+            let end = optend.ok_or(Error::MissingElement("end", "location"))?;
             Ok(FeatureLocation::Range(begin, end))
         }
     }
@@ -94,7 +94,8 @@ impl FromXml for Position {
         let pos = attr.get(&b"position"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
-            .map(|x| usize::from_str(&x).expect("ERR: could not decode `position` as usize"));
+            .map(|x| usize::from_str(&x))
+            .transpose()?;
 
         reader.read_to_end(event.local_name(), buffer)?;
         Ok(Position { pos, status, evidence })

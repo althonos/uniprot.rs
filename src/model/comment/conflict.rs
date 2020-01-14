@@ -45,7 +45,7 @@ impl FromXml for Conflict {
             Some(b"erroneous translation") => Conflict::new(ErroneousTranslation),
             Some(b"miscellaneous discrepancy") => Conflict::new(MiscellaneousDiscrepancy),
             Some(other) => panic!("ERR: invalid `type` in `conflict`: {:?}", other),
-            None => panic!("ERR: missing required `type` in `conflict`"),
+            None => return Err(Error::MissingAttribute("type", "conflict")),
         };
 
         // extract optional reference
@@ -58,7 +58,7 @@ impl FromXml for Conflict {
             e @ b"sequence" => {
                 let sequence = FromXml::from_xml(&e, reader, buffer)?;
                 if let Some(_) = conflict.sequence.replace(sequence) {
-                    panic!("ERR: duplicate `sequence` in `conflict`");
+                    return Err(Error::DuplicateElement("sequence", "conflict"));
                 }
             }
         }
@@ -111,19 +111,18 @@ impl FromXml for ConflictSequence {
 
         let attr = attributes_to_hashmap(event)?;
         let id = attr.get(&b"id"[..])
-            .expect("ERR: could not find required `id` attr on `sequence`")
+            .ok_or(Error::MissingAttribute("id", "sequence"))?
             .unescape_and_decode_value(reader)?;
         let version = attr.get(&b"version"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|s| usize::from_str(&s))
-            .transpose()
-            .expect("ERR: could not decode `version` as usize");
+            .transpose()?;
         let resource = match attr.get(&b"resource"[..]).map(|a| &*a.value) {
             Some(b"EMBL") => Resource::Embl,
             Some(b"EMBL-CDS") => Resource::EmblCds,
             Some(other) => panic!("ERR: invalid `resource` in `sequence`: {:?}", other),
-            None => panic!("ERR: missing required `resource` in `sequence`"),
+            None => return Err(Error::MissingAttribute("resource", "sequence")),
         };
 
         reader.read_to_end(b"sequence", buffer)?;

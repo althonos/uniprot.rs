@@ -37,19 +37,19 @@ impl FromXml for Absorption {
             b"max" => {
                 let max = reader.read_text(b"max", buffer)?;
                 if let Some(_) = absorption.max.replace(max) {
-                    panic!("ERR: duplicate `max` in `absorption`");
+                    return Err(Error::DuplicateElement("max", "absorption"));
                 }
             },
             b"min" => {
                 let min = reader.read_text(b"min", buffer)?;
                 if let Some(_) = absorption.min.replace(min) {
-                    panic!("ERR: duplicate `min` in `absorption`");
+                    return Err(Error::DuplicateElement("min", "absorption"));
                 }
             },
             b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
                 if let Some(_) = absorption.text.replace(text) {
-                    panic!("ERR: duplicate `text` in `absorption`");
+                    return Err(Error::DuplicateElement("text", "absorption"));
                 }
             }
         }
@@ -84,7 +84,7 @@ impl FromXml for Kinetics {
             b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
                 if let Some(_) = kinetics.text.replace(text) {
-                    panic!("ERR: duplicate `text` in `kinetics`");
+                    return Err(Error::DuplicateElement("text", "kinetics"));
                 }
             }
         }

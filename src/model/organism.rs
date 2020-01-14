@@ -77,7 +77,7 @@ impl FromXml for Name {
             Some(b"synonym") => Ok(Name::Synonym(value)),
             Some(b"abbreviation") => Ok(Name::Abbreviation(value)),
             Some(other) => panic!("ERR: invalid value for organism name type: {:?}", other),
-            None => panic!("ERR: missing required value for `name` in `organism`"),
+            None => return Err(Error::MissingAttribute("type", "name")),
         }
     }
 }

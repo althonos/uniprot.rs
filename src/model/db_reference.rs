@@ -38,17 +38,17 @@ impl FromXml for DbReference {
             e @ b"molecule" => {
                 let molecule = Molecule::from_xml(&e, reader, buffer)?;
                 if let Some(_) = db_reference.molecule.replace(molecule) {
-                    panic!("ERR: duplicate `molecule` found in `db_reference`");
+                    return Err(Error::DuplicateElement("molecule", "dbReference"))
                 }
             }
         }
 
         let attr = attributes_to_hashmap(event)?;
         db_reference.ty = attr.get(&b"type"[..])
-            .expect("ERR: could not find required `type` on `dbReference`")
+            .ok_or(Error::MissingAttribute("type", "dbReference"))?
             .unescape_and_decode_value(reader)?;
         db_reference.id = attr.get(&b"id"[..])
-            .expect("ERR: could not find required `id` on `dbReference`")
+            .ok_or(Error::MissingAttribute("id", "dbReference"))?
             .unescape_and_decode_value(reader)?;
 
         Ok(db_reference)

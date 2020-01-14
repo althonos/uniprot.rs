@@ -52,7 +52,7 @@ impl FromXml for GeneLocation {
             Some(b"plasmid") => Plasmid,
             Some(b"plastid") => Plastid,
             Some(other) => panic!("ERR: invalid value for `type` in `geneLocation`: {:?}", other),
-            None => panic!("ERR: missing required value `type` in `geneLocation`"),
+            None => return Err(Error::MissingAttribute("type", "geneLocation")),
         };
 
         let mut geneloc = Self::new(loctype);

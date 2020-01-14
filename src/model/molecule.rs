@@ -23,10 +23,14 @@ impl FromXml for Molecule {
         debug_assert_eq!(event.local_name(), b"molecule");
 
         match extract_attribute(event, &b"type"[..])? {
-            None => reader.read_text(b"molecule", buffer).map(Molecule::Name),
+            None => reader.read_text(b"molecule", buffer)
+                .map(Molecule::Name)
+                .map_err(Error::from),
             Some(attr) => {
                 reader.read_to_end(b"molecule", buffer)?;
-                attr.unescape_and_decode_value(reader).map(Molecule::Id)
+                attr.unescape_and_decode_value(reader)
+                    .map(Molecule::Id)
+                    .map_err(Error::from)
             }
         }
     }
