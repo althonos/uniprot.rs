@@ -1,5 +1,6 @@
 pub mod comment;
 pub mod db_reference;
+pub mod evidence;
 pub mod feature;
 pub mod feature_location;
 pub mod gene;
@@ -26,6 +27,7 @@ use crate::parser::utils::attributes_to_hashmap;
 
 use self::comment::Comment;
 use self::db_reference::DbReference;
+use self::evidence::Evidence;
 use self::sequence::Sequence;
 use self::feature::Feature;
 use self::gene::Gene;
@@ -60,7 +62,7 @@ pub struct Entry {
     pub protein_existence: ProteinExistence,
     pub keywords: Vec<Keyword>,
     pub features: Vec<Feature>,
-    // pub evidences: Vec<Evidence>,
+    pub evidences: Vec<Evidence>,
     pub sequence: Sequence,
 }
 
@@ -82,6 +84,7 @@ impl Entry {
             keywords: Default::default(),
             features: Default::default(),
             sequence: Default::default(),
+            evidences: Default::default(),
         }
     }
 
@@ -139,9 +142,8 @@ impl Entry {
             e @ b"feature" => {
                 entry.features.push(FromXml::from_xml(&e, reader, buffer)?);
             },
-            b"evidence" => {
-                // println!("TODO `evidence` in `entry`");
-                reader.read_to_end(b"evidence", buffer)?;
+            e @ b"evidence" => {
+                entry.evidences.push(FromXml::from_xml(&e, reader, buffer)?);
             },
             e @ b"sequence" => {
                 entry.sequence = Sequence::from_xml(&e, reader, buffer)?;
