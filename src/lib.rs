@@ -54,17 +54,9 @@ mod tests {
 
     #[test]
     fn parse_with_ignore() {
-        // connect to the EBI FTP server via HTTP
-        let gzipped = reqwest::blocking::get(SPROT)
-            .expect("could not connect to EBI FTP server");
-
-        // decode gzip stream and collect only first entry
-        let dec = libflate::gzip::Decoder::new(gzipped).unwrap();
-        let mut txt = std::io::BufReader::new(dec).lines()
-            .take(110)
-            .collect::<Result<String, _>>()
+        //
+        let txt = std::fs::read_to_string("tests/uniprot.xml")
             .unwrap();
-        txt.push_str("</uniprot>");
 
         // check parsing normally will get some hosts
         let entry = crate::parse(std::io::Cursor::new(&txt))
