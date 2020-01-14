@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::io::BufRead;
 
+use bytes::Bytes;
 use quick_xml::Reader;
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::BytesEnd;
@@ -24,6 +25,46 @@ macro_rules! parse_inner {
                 Ok(Event::Start(ref x)) => {
                     parse_inner_impl!(x, x.local_name(), $($rest)*);
                     $reader.read_to_end(x.local_name(), &mut Vec::new())?;
+                    unimplemented!(
+                        "`{}` in `{}`",
+                        String::from_utf8_lossy(x.local_name()),
+                        String::from_utf8_lossy($event.local_name())
+                    );
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+                Ok(Event::Eof) => {
+                    let e = String::from_utf8_lossy($event.local_name());
+                    return Err(XmlError::UnexpectedEof(e.to_string()));
+                }
+                Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
+                    break;
+                }
+                _ => continue,
+            }
+        }
+    })
+}
+
+macro_rules! parse_inner_ignoring {
+    ($event:expr, $reader:expr, $buffer:expr, $ignores:expr, $($rest:tt)*) => ({
+        loop {
+            use $crate::quick_xml::events::BytesEnd;
+            use $crate::quick_xml::events::BytesStart;
+            use $crate::quick_xml::events::Event;
+            use $crate::quick_xml::Error as XmlError;
+
+            $buffer.clear();
+            match $reader.read_event($buffer) {
+                Ok(Event::Start(ref x)) => {
+                    if $ignores.contains(x.local_name()) {
+                        $reader.read_to_end(x.local_name(), &mut Vec::new())?;
+                        continue
+                    } else {
+                        parse_inner_impl!(x, x.local_name(), $($rest)*);
+                    }
+
                     unimplemented!(
                         "`{}` in `{}`",
                         String::from_utf8_lossy(x.local_name()),
@@ -133,6 +174,32 @@ pub struct UniprotParser<B: BufRead> {
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
     finished: bool,
+    ignores: HashSet<Bytes>,
+}
+
+impl<B: BufRead> UniprotParser<B> {
+    /// Make the parser ignore an `entry` element.
+    ///
+    /// This can be useful to speed-up the parser if you are only interested
+    /// in particular elements, and you want the parser to only process these.
+    /// **Note that element names must be given as they appear in the XML,
+    /// like `organismHost` or `reference`, and not like they appear as fields
+    /// of the `Entry` structure.**
+    ///
+    /// # Example
+    /// ```rust
+    /// # let f = std::fs::File::open("tests/uniprot.xml")
+    /// #     .map(BufReader::new()).unwrap();
+    /// let entry = uniprot::parse(reader)
+    ///                 .ignore("feature")
+    ///                 .next()
+    ///                 .unwrap();
+    /// # assert!(entry.features.is_empty());
+    /// ```
+    pub fn ignore<K: Into<Bytes>>(&mut self, key: K) -> &mut Self {
+        self.ignores.insert(key.into());
+        self
+    }
 }
 
 impl<B: BufRead> UniprotParser<B> {
@@ -160,6 +227,7 @@ impl<B: BufRead> UniprotParser<B> {
             buffer,
             cache,
             finished: false,
+            ignores: Default::default()
         }
     }
 }
@@ -186,6 +254,7 @@ impl<B: BufRead> Iterator for UniprotParser<B> {
                 // error if reaching EOF
                 Ok(Event::Eof) => {
                     let e = String::from("entry");
+                    self.finished = true;
                     return Some(Err(XmlError::UnexpectedEof(e)));
                 }
                 // if end of `uniprot` is reached, return no further item
@@ -195,9 +264,12 @@ impl<B: BufRead> Iterator for UniprotParser<B> {
                 },
                 // create a new Entry
                 Ok(Event::Start(ref e)) if e.local_name() == b"entry" => {
-                    let event = e.clone().into_owned();
-                    return Entry::from_xml(&event, &mut self.xml, &mut self.buffer)
-                        .map(Some).transpose();
+                    return Some(Entry::from_xml_ignoring(
+                        &e.clone().into_owned(),
+                        &mut self.xml,
+                        &mut self.buffer,
+                        &self.ignores
+                    ));
                 },
                 _ => (),
             }

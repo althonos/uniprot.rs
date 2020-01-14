@@ -1,13 +1,3 @@
-use std::io::BufRead;
-use std::str::FromStr;
-
-use quick_xml::Reader;
-use quick_xml::events::BytesStart;
-
-use crate::error::Error;
-use crate::parser::FromXml;
-use crate::parser::utils::attributes_to_hashmap;
-
 pub mod comment;
 pub mod db_reference;
 pub mod feature;
@@ -21,6 +11,18 @@ pub mod property;
 pub mod protein;
 pub mod reference;
 pub mod sequence;
+
+use std::collections::HashSet;
+use std::io::BufRead;
+use std::str::FromStr;
+
+use bytes::Bytes;
+use quick_xml::Reader;
+use quick_xml::events::BytesStart;
+
+use crate::error::Error;
+use crate::parser::FromXml;
+use crate::parser::utils::attributes_to_hashmap;
 
 use self::comment::Comment;
 use self::db_reference::DbReference;
@@ -82,13 +84,12 @@ impl Entry {
             sequence: Default::default(),
         }
     }
-}
 
-impl FromXml for Entry {
-    fn from_xml<B: BufRead>(
+    pub(crate) fn from_xml_ignoring<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
+        ignores: &HashSet<Bytes>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"entry");
 
@@ -101,7 +102,7 @@ impl FromXml for Entry {
         };
 
         let mut entry = Entry::new(dataset);
-        parse_inner!{event, reader, buffer,
+        parse_inner_ignoring!{event, reader, buffer, ignores,
             b"accession" => {
                 entry.accessions.push(reader.read_text(b"accession", buffer)?);
             },
@@ -151,6 +152,16 @@ impl FromXml for Entry {
         }
 
         Ok(entry)
+    }
+}
+
+impl FromXml for Entry {
+    fn from_xml<B: BufRead>(
+        event: &BytesStart,
+        reader: &mut Reader<B>,
+        buffer: &mut Vec<u8>
+    ) -> Result<Self, Error> {
+        Self::from_xml_ignoring(event, reader, buffer, &Default::default())
     }
 }
 

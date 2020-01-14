@@ -11,6 +11,7 @@ chrono = "*"
 quick-xml = "*"
 url = "*"
 fnv = "*"
+bytes = "*"
 
 [dev-dependencies]
 ftp = "*"
