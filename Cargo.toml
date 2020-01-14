@@ -3,8 +3,22 @@ name = "uniprot"
 version = "0.1.0"
 authors = ["Martin Larralde <martin.larralde@ens-paris-saclay.fr>"]
 edition = "2018"
+license = "MIT"
+description = "Rust data structures and parser for the Uniprot database(s)."
+repository = "https://github/althonos/uniprot.rs"
+readme = "README.md"
+keywords = ["uniprot", "uniprotkb", "swissprot", "trembl", "parser"]
+categories = ["science"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[badges.travis-ci]
+repository = "althonos/uniprot.rs"
+[badges.codecov]
+repository = "althonos/uniprot.rs"
+service    = "github"
+[badges.is-it-maintained-issue-resolution]
+repository = "althonos/uniprot.rs"
+[badges.maintenance]
+status     = "as-is"
 
 [dependencies]
 bytes = "0.5.3"
