@@ -25,8 +25,7 @@ use self::parser::UniprotParser;
 /// let dec = libflate::gzip::Decoder::new(f).unwrap();
 /// let mut parser = uniprot::parse(std::io::BufReader::new(dec));
 ///
-/// println!("{:?}", parser.next())
-///
+/// println!("{:#?}", parser.next())
 /// ```
 pub fn parse<B: BufRead>(reader: B) -> UniprotParser<B> {
     UniprotParser::new(reader)

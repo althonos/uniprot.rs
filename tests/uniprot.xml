@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uniprot xmlns="http://uniprot.org/uniprot"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://uniprot.org/uniprot http://www.uniprot.org/docs/uniprot.xsd">
+<entry dataset="Swiss-Prot" created="2011-06-28" modified="2019-12-11" version="39" xmlns="http://uniprot.org/uniprot">
+  <accession>Q6GZX4</accession>
+  <name>001R_FRG3G</name>
+  <protein>
+    <recommendedName>
+      <fullName>Putative transcription factor 001R</fullName>
+    </recommendedName>
+  </protein>
+  <gene>
+    <name type="ORF">FV3-001R</name>
+  </gene>
+  <organism>
+    <name type="scientific">Frog virus 3 (isolate Goorha)</name>
+    <name type="common">FV-3</name>
+    <dbReference type="NCBI Taxonomy" id="654924"/>
+    <lineage>
+      <taxon>Viruses</taxon>
+      <taxon>Iridoviridae</taxon>
+      <taxon>Alphairidovirinae</taxon>
+      <taxon>Ranavirus</taxon>
+    </lineage>
+  </organism>
+  <organismHost>
+    <name type="scientific">Dryophytes versicolor</name>
+    <name type="common">chameleon treefrog</name>
+    <dbReference type="NCBI Taxonomy" id="30343"/>
+  </organismHost>
+  <organismHost>
+    <name type="scientific">Lithobates pipiens</name>
+    <name type="common">Northern leopard frog</name>
+    <name type="synonym">Rana pipiens</name>
+    <dbReference type="NCBI Taxonomy" id="8404"/>
+  </organismHost>
+  <organismHost>
+    <name type="scientific">Notophthalmus viridescens</name>
+    <name type="common">Eastern newt</name>
+    <name type="synonym">Triturus viridescens</name>
+    <dbReference type="NCBI Taxonomy" id="8316"/>
+  </organismHost>
+  <organismHost>
+    <name type="scientific">Rana sylvatica</name>
+    <name type="common">Wood frog</name>
+    <dbReference type="NCBI Taxonomy" id="45438"/>
+  </organismHost>
+  <reference key="1">
+    <citation type="journal article" date="2004" name="Virology" volume="323" first="70" last="84">
+      <title>Comparative genomic analyses of frog virus 3, type species of the genus Ranavirus (family Iridoviridae).</title>
+      <authorList>
+        <person name="Tan W.G."/>
+        <person name="Barkman T.J."/>
+        <person name="Gregory Chinchar V."/>
+        <person name="Essani K."/>
+      </authorList>
+      <dbReference type="PubMed" id="15165820"/>
+      <dbReference type="DOI" id="10.1016/j.virol.2004.02.019"/>
+    </citation>
+    <scope>NUCLEOTIDE SEQUENCE [LARGE SCALE GENOMIC DNA]</scope>
+  </reference>
+  <comment type="function">
+    <text evidence="1">Transcription activation.</text>
+  </comment>
+  <dbReference type="EMBL" id="AY548484">
+    <property type="protein sequence ID" value="AAT09660.1"/>
+    <property type="molecule type" value="Genomic_DNA"/>
+  </dbReference>
+  <dbReference type="RefSeq" id="YP_031579.1">
+    <property type="nucleotide sequence ID" value="NC_005946.1"/>
+  </dbReference>
+  <dbReference type="SwissPalm" id="Q6GZX4"/>
+  <dbReference type="GeneID" id="2947773"/>
+  <dbReference type="KEGG" id="vg:2947773"/>
+  <dbReference type="Proteomes" id="UP000008770">
+    <property type="component" value="Genome"/>
+  </dbReference>
+  <dbReference type="GO" id="GO:0046782">
+    <property type="term" value="P:regulation of viral transcription"/>
+    <property type="evidence" value="ECO:0000501"/>
+    <property type="project" value="InterPro"/>
+  </dbReference>
+  <dbReference type="InterPro" id="IPR007031">
+    <property type="entry name" value="Poxvirus_VLTF3"/>
+  </dbReference>
+  <dbReference type="Pfam" id="PF04947">
+    <property type="entry name" value="Pox_VLTF3"/>
+    <property type="match status" value="1"/>
+  </dbReference>
+  <proteinExistence type="predicted"/>
+  <keyword id="KW-0010">Activator</keyword>
+  <keyword id="KW-1185">Reference proteome</keyword>
+  <keyword id="KW-0804">Transcription</keyword>
+  <keyword id="KW-0805">Transcription regulation</keyword>
+  <feature type="chain" id="PRO_0000410512" description="Putative transcription factor 001R">
+    <location>
+      <begin position="1"/>
+      <end position="256"/>
+    </location>
+  </feature>
+  <feature type="compositionally biased region" description="Poly-Arg">
+    <location>
+      <begin position="14"/>
+      <end position="17"/>
+    </location>
+  </feature>
+  <evidence type="ECO:0000305" key="1"/>
+  <sequence length="256" mass="29735" checksum="B4840739BF7D4121" modified="2004-07-19" version="1">MAFSAEDVLKEYDRRRRMEALLLSLYYPNDRKLLDYKEWSPPRVQVECPKAPVEWNNPPSEKGLIVGHFSGIKYKGEKAQASEVDVNKMCCWVSKFKDAMRRYQGIQTCKIPGKVLSDLDAKIKAYNLTVEGVEGFVRYSRVTKQHVAAFLKELRHSKQYENVNLIHYILTDKRVDIQHLEKDLVKDFKALVESAHRMRQGHMINVKYILYQLLKKHGHGPDGPDILTVKTGSKGVLYDDSFRKIYTDLGWKFTPL</sequence>
+</entry>
+</uniprot>

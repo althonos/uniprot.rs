@@ -188,13 +188,12 @@ impl<B: BufRead> UniprotParser<B> {
     ///
     /// # Example
     /// ```rust
-    /// # let f = std::fs::File::open("tests/uniprot.xml")
-    /// #     .map(BufReader::new()).unwrap();
-    /// let entry = uniprot::parse(reader)
-    ///                 .ignore("feature")
-    ///                 .next()
-    ///                 .unwrap();
-    /// # assert!(entry.features.is_empty());
+    /// # let reader = std::fs::File::open("tests/uniprot.xml")
+    /// #     .map(std::io::BufReader::new).unwrap();
+    /// for result in uniprot::parse(reader).ignore("feature") {
+    ///     let entry = result.unwrap();
+    ///     assert_eq!(entry.features.len(), 0);
+    /// }
     /// ```
     pub fn ignore<K: Into<Bytes>>(&mut self, key: K) -> &mut Self {
         self.ignores.insert(key.into());
