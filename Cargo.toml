@@ -13,7 +13,10 @@ fnv = "1.0.6"
 quick-xml = "0.17.2"
 url = "2.1.1"
 
-
 [dev-dependencies]
 ftp = "3.0.1"
 libflate = "0.1.27"
+[dev-dependencies.reqwest]
+version = "0.10.0"
+features = ["blocking"]
+default-features = false

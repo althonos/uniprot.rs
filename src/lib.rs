@@ -35,18 +35,15 @@ mod tests {
 
     use super::*;
 
-    const SPROT: &str = "/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.xml.gz";
+    const SPROT: &str = "http://ftp.ebi.ac.uk/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.xml.gz";
 
     #[test]
     fn parse_swissprot() {
-        // open FTP and connect anonymously
-        let mut client = ftp::FtpStream::connect("ftp.uniprot.org:21")
+        // connect to the EBI FTP server via HTTP
+        let gzipped = reqwest::blocking::get(SPROT)
             .expect("could not connect to EBI FTP server");
-        client.login("anonymous", "anonymous")
-            .expect("could not login anonymously to EBI FTP server");
 
         // decode gzip stream
-        let gzipped = client.get(SPROT).expect("Swissprot not found");
         let dec = libflate::gzip::Decoder::new(gzipped).unwrap();
         for x in crate::parse(std::io::BufReader::new(dec)).take(1000) {
             let entry = x.expect("parsing of entry failed");
@@ -57,14 +54,11 @@ mod tests {
 
     #[test]
     fn parse_with_ignore() {
-        // open FTP and connect anonymously
-        let mut client = ftp::FtpStream::connect("ftp.uniprot.org:21")
+        // connect to the EBI FTP server via HTTP
+        let gzipped = reqwest::blocking::get(SPROT)
             .expect("could not connect to EBI FTP server");
-        client.login("anonymous", "anonymous")
-            .expect("could not login anonymously to EBI FTP server");
 
         // decode gzip stream and collect only first entry
-        let gzipped = client.get(SPROT).expect("Swissprot not found");
         let dec = libflate::gzip::Decoder::new(gzipped).unwrap();
         let mut txt = std::io::BufReader::new(dec).lines()
             .take(110)

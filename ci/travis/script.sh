@@ -6,8 +6,8 @@
 
 if cargo tarpaulin -V >/dev/null 2>&1; then
 	log Measuring code coverage with Tarpaulin
-	cargo tarpaulin -v --out Xml --ciserver travis-ci
+	cargo tarpaulin -v --release --out Xml --ciserver travis-ci
 else
 	log Testing code without coverage
-	cargo test
+	cargo test --release
 fi
