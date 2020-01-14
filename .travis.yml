@@ -1,14 +1,10 @@
 sudo: false
 dist: xenial
 language: rust
+rust: stable
 
 cache:
   cargo: true
-
-rust:
-- stable
-- beta
-- nightly
 
 env:
   global:
