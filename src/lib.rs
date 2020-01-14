@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn parse_swissprot() {
         // open FTP and connect anonymously
-        let mut client = ftp::FtpStream::connect("ftp.ebi.ac.uk:21")
+        let mut client = ftp::FtpStream::connect("ftp.uniprot.org:21")
             .expect("could not connect to EBI FTP server");
         client.login("anonymous", "anonymous")
             .expect("could not login anonymously to EBI FTP server");
@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn parse_with_ignore() {
         // open FTP and connect anonymously
-        let mut client = ftp::FtpStream::connect("ftp.ebi.ac.uk:21")
+        let mut client = ftp::FtpStream::connect("ftp.uniprot.org:21")
             .expect("could not connect to EBI FTP server");
         client.login("anonymous", "anonymous")
             .expect("could not login anonymously to EBI FTP server");
