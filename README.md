@@ -2,7 +2,7 @@
 
 *Rust data structures and parser for the [UniprotKB database(s)].*
 
-[UniprotKB database(s)]((https://www.uniprot.org/))
+[UniprotKB database(s)]: https://www.uniprot.org/
 
 [![TravisCI](https://img.shields.io/travis/althonos/uniprot.rs/master.svg?maxAge=600&style=flat-square)](https://travis-ci.org/althonos/uniprot.rs/branches)
 [![Codecov](https://img.shields.io/codecov/c/gh/althonos/uniprot.rs/master.svg?style=flat-square&maxAge=600)](https://codecov.io/gh/althonos/uniprot.rs)
