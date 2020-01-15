@@ -6,5 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
+[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.1.0...HEAD
 
-[Unreleased]: https://github.com/althonos/uniprot.rs/compare/52e6940...HEAD
+
+## [v0.1.0] - 2020-15-01 
+[v0.1.0]: https://github.com/althonos/uniprot.rs/compare/52e6940...v0.1.0
+
+Initial release.
