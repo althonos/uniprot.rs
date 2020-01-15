@@ -11,9 +11,7 @@ use super::molecule::Molecule;
 use super::property::Property;
 
 #[derive(Debug, Default, Clone)]
-/// Describes a database cross-reference.
-///
-/// *Equivalent to the flat file DR-line. *
+/// A database cross-reference.
 pub struct DbReference {
     pub molecule: Option<Molecule>,
     pub property: Vec<Property>,

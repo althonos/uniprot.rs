@@ -1,17 +1,25 @@
+//!
+
 pub mod comment;
-pub mod db_reference;
 pub mod evidence;
 pub mod feature;
 pub mod feature_location;
 pub mod gene;
 pub mod gene_location;
-pub mod keyword;
-pub mod molecule;
 pub mod organism;
-pub mod property;
 pub mod protein;
 pub mod reference;
 pub mod sequence;
+
+mod db_reference;
+mod keyword;
+mod molecule;
+mod property;
+
+pub use self::db_reference::DbReference;
+pub use self::keyword::Keyword;
+pub use self::property::Property;
+pub use self::molecule::Molecule;
 
 use std::collections::HashSet;
 use std::io::BufRead;
@@ -26,7 +34,6 @@ use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 
 use self::comment::Comment;
-use self::db_reference::DbReference;
 use self::evidence::Evidence;
 use self::sequence::Sequence;
 use self::feature::Feature;
@@ -36,7 +43,6 @@ use self::organism::Organism;
 use self::reference::Reference;
 use self::protein::Protein;
 use self::protein::ProteinExistence;
-use self::keyword::Keyword;
 
 #[derive(Debug, Clone)]
 /// A UniProtKB entry.
