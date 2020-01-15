@@ -4,7 +4,9 @@ language: rust
 rust: stable
 
 cache:
-  cargo: true
+  directories:
+    - $HOME/.cargo/bin
+    - $TRAVIS_BUILD_DIR/target
 
 env:
   global:
