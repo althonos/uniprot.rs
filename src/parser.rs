@@ -196,11 +196,10 @@ pub(crate) mod utils {
             // can only be obtained from valid UTF-8 anyway.
             let s = std::str::from_utf8_unchecked(&*a.value);
             T::from_str(s)
-                .map_err(|_| a.unescape_and_decode_value(reader)
-                    .map_or_else(
-                        Error::from,
-                        |s| Error::invalid_value(name, element, s)
-                    ))
+                .map_err(|_| match a.unescape_and_decode_value(reader) {
+                    Ok(s) => Error::invalid_value(name, element, s),
+                    Err(e) => Error::from(e),
+                })
         }
     }
 }
