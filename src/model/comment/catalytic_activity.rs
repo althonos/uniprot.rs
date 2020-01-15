@@ -99,8 +99,10 @@ impl FromXml for PhysiologicalReaction {
         let direction = match attr.get(&b"direction"[..]).map(|a| &*a.value) {
             Some(b"left-to-right") => LeftToRight,
             Some(b"right-to-left")=> RightToLeft,
-            Some(other) => panic!("ERR: invalid `direction` for `physiologicalReaction`: {:?}", other),
             None => return Err(Error::MissingAttribute("direction", "PhysiologicalReaction")),
+            Some(other) => return Err(
+                Error::invalid_value("direction", "physiologicalReaction", String::from_utf8_lossy(other))
+            ),
         };
 
         let mut optdbref = None;

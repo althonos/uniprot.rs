@@ -144,8 +144,10 @@ impl FromXml for ProteinExistence {
             Some(b"inferred from homology") => Ok(HomologyInferred),
             Some(b"predicted") => Ok(Predicted),
             Some(b"uncertain") => Ok(Uncertain),
-            Some(other) => panic!("ERR: invalid `type` in `proteinExistence`: {:?}", other),
             None => return Err(Error::MissingAttribute("type", "proteinExistence")),
+            Some(other) => return Err(
+                Error::invalid_value("other", "ProteinExistence", String::from_utf8_lossy(other))
+            )
         }
     }
 }

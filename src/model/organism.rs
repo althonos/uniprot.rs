@@ -76,8 +76,10 @@ impl FromXml for Name {
             Some(b"scientific") => Ok(Name::Scientific(value)),
             Some(b"synonym") => Ok(Name::Synonym(value)),
             Some(b"abbreviation") => Ok(Name::Abbreviation(value)),
-            Some(other) => panic!("ERR: invalid value for organism name type: {:?}", other),
-            None => return Err(Error::MissingAttribute("type", "name")),
+            None => Err(Error::MissingAttribute("type", "name")),
+            Some(other) => Err(
+                Error::invalid_value("type", "name", String::from_utf8_lossy(other)),
+            )
         }
     }
 }

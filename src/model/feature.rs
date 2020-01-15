@@ -118,7 +118,9 @@ impl FromXml for Feature {
             b"unsure residue" => Feature::new(UnsureResidue, location),
             b"zinc finger region" => Feature::new(ZincFingerRegion, location),
             b"intramembrane region" => Feature::new(IntramembraneRegion, location),
-            other => panic!("ERR: invalid `type` value in `feature`: {:?}", other),
+            other => return Err(
+                Error::invalid_value("type", "feature", String::from_utf8_lossy(other))
+            )
         };
 
         // extract optional attributes

@@ -106,8 +106,8 @@ impl Entry {
         let dataset = match attr.get(&b"dataset"[..]).map(|a| &*a.value) {
             Some(b"Swiss-Prot") => Dataset::SwissProt,
             Some(b"TrEMBL") => Dataset::TrEmbl,
-            Some(other) => panic!("ERR: invalid value for `dataset` attribute of `entry`: {:?}", other),
             None => return Err(Error::MissingAttribute("dataset", "entry")),
+            Some(other) => return Err(Error::invalid_value("dataset", "entry", String::from_utf8_lossy(other)))
         };
 
         let mut entry = Entry::new(dataset);

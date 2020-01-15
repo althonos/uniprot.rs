@@ -44,8 +44,10 @@ impl FromXml for Conflict {
             Some(b"erroneous gene model prediction") => Conflict::new(ErroneousGeneModelPrediction),
             Some(b"erroneous translation") => Conflict::new(ErroneousTranslation),
             Some(b"miscellaneous discrepancy") => Conflict::new(MiscellaneousDiscrepancy),
-            Some(other) => panic!("ERR: invalid `type` in `conflict`: {:?}", other),
             None => return Err(Error::MissingAttribute("type", "conflict")),
+            Some(other) =>  return Err(
+                Error::invalid_value("type", "conflict", String::from_utf8_lossy(other))
+            ),
         };
 
         // extract optional reference
@@ -121,8 +123,10 @@ impl FromXml for ConflictSequence {
         let resource = match attr.get(&b"resource"[..]).map(|a| &*a.value) {
             Some(b"EMBL") => Resource::Embl,
             Some(b"EMBL-CDS") => Resource::EmblCds,
-            Some(other) => panic!("ERR: invalid `resource` in `sequence`: {:?}", other),
             None => return Err(Error::MissingAttribute("resource", "sequence")),
+            Some(other) => return Err(
+                Error::invalid_value("resource", "sequence", String::from_utf8_lossy(other))
+            ),
         };
 
         reader.read_to_end(b"sequence", buffer)?;

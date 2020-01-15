@@ -192,7 +192,7 @@ impl FromXml for Comment {
                 let i1 = interactants.pop()
                     .ok_or(Error::MissingElement("interactant", "interaction"))?;
                 if !interactants.is_empty() {
-                    panic!("ERR: too many `interactant` in `interaction`");
+                    return Err(Error::DuplicateElement("interactant", "interaction"));
                 }
 
                 // create new interaction
@@ -317,7 +317,7 @@ impl FromXml for Comment {
                     .ok_or(Error::MissingElement("reaction", "comment"))?;
 
                 if physio.len() > 2 {
-                    panic!("ERR: too many `physiologicalReaction` found in `comment`")
+                    return Err(Error::DuplicateElement("physiologicalReaction", "comment"));
                 }
                 act.physiological_reactions = physio;
                 comment.ty = CommentType::CatalyticActivity(act);
@@ -366,8 +366,10 @@ impl FromXml for Comment {
                 comment.ty = CommentType::RnaEditing(locations);
             }
 
-            Some(other) => panic!("unknown `type` in `comment`: {:?}", String::from_utf8_lossy(other)),
             None => return Err(Error::MissingAttribute("type", "comment")),
+            Some(other) => return Err(
+                Error::invalid_value("type", "comment", String::from_utf8_lossy(other))
+            ),
         }
 
         Ok(comment)

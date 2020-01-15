@@ -51,8 +51,10 @@ impl FromXml for GeneLocation {
             Some(b"nucleomorph") => Nucleomorph,
             Some(b"plasmid") => Plasmid,
             Some(b"plastid") => Plastid,
-            Some(other) => panic!("ERR: invalid value for `type` in `geneLocation`: {:?}", other),
             None => return Err(Error::MissingAttribute("type", "geneLocation")),
+            Some(other) => return Err(
+                Error::invalid_value("type", "geneLocation", String::from_utf8_lossy(other))
+            )
         };
 
         let mut geneloc = Self::new(loctype);
@@ -118,7 +120,9 @@ impl FromXml for LocationName {
             Some(b"known") => LocationStatus::Known,
             Some(b"unknown") => LocationStatus::Unknown,
             None => LocationStatus::default(),
-            Some(other) => panic!("ERR: invalid `status` in `name`: {:?}", other),
+            Some(other) => return Err(
+                Error::invalid_value("status", "name", String::from_utf8_lossy(other))
+            )
         };
 
         Ok(Self::with_status(value, status))

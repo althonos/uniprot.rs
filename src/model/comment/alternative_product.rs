@@ -41,8 +41,10 @@ impl FromXml for Event {
             Some(b"alternative initiation") => Ok(Event::AlternativeInitiation),
             Some(b"alternative promoter") => Ok(Event::AlternativePromoter),
             Some(b"ribosomal frameshifting") => Ok(Event::RibosomalFrameshifting),
-            Some(other) => panic!("ERR: invalid `type` in `event`: {:?}", other),
             None => return Err(Error::MissingAttribute("type", "event")),
+            Some(other) => return Err(
+                Error::invalid_value("type", "event", String::from_utf8_lossy(other))
+            )
         }
     }
 }
@@ -146,8 +148,10 @@ impl FromXml for IsoformSequence {
             Some(b"described") => IsoformSequence::new(Described),
             Some(b"displayed") => IsoformSequence::new(Displayed),
             Some(b"external") => IsoformSequence::new(External),
-            Some(other) => panic!("ERR: invalid value for `type` in `sequence`: {:?}", other),
             None => return Err(Error::MissingAttribute("type", "sequence")),
+            Some(other) => return Err(
+                Error::invalid_value("type", "sequence", String::from_utf8_lossy(other))
+            ),
         };
 
         // extract optional reference

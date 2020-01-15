@@ -49,10 +49,13 @@ impl FromXml for FeatureLocation {
         }
 
         if let Some(pos) = optposition {
-            if optbegin.is_some() || optend.is_some() {
-                panic!("ERR: cannot have both `begin` or `end` with `position`");
+            if optbegin.is_some() {
+                return Err(Error::DuplicateElement("begin", "location"));
+            } else if optend.is_some() {
+                return Err(Error::DuplicateElement("end", "location"));
+            } else {
+                Ok(FeatureLocation::Position(pos))
             }
-            Ok(FeatureLocation::Position(pos))
         } else {
             let begin = optbegin.ok_or(Error::MissingElement("begin", "location"))?;
             let end = optend.ok_or(Error::MissingElement("end", "location"))?;
@@ -87,8 +90,10 @@ impl FromXml for Position {
             Some(b"less than") => Status::Certain,
             Some(b"greater than") => Status::Certain,
             Some(b"unknown") => Status::Certain,
-            Some(other) => panic!("ERR: invalid `status` for `position`: {:?}", other),
             None => Status::default(),
+            Some(other) => return Err(
+                Error::invalid_value("status", "position", String::from_utf8_lossy(other))
+            ),
         };
         let evidence = get_evidences(reader, &attr)?;
         let pos = attr.get(&b"position"[..])

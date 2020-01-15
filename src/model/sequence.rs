@@ -58,8 +58,10 @@ impl FromXml for Sequence {
         let fragment = match attr.get(&b"fragment"[..]).map(|x| &*x.value) {
             Some(b"single") => Some(FragmentType::Single),
             Some(b"multiple") => Some(FragmentType::Multiple),
-            Some(other) => panic!("ERR: invalid `fragment` in `sequence`: {:?}", other),
             None => None,
+            Some(other) => return Err(
+                Error::invalid_value("fragment", "sequence", String::from_utf8_lossy(other))
+            ),
         };
 
         let value = reader.read_text(b"sequence", buffer)?;

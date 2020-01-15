@@ -5,6 +5,7 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::ValueError;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
@@ -147,8 +148,10 @@ impl FromXml for Citation {
             Some(b"submission") => Submission,
             Some(b"thesis") => Thesis,
             Some(b"unpublished observations") => UnpublishedObservations,
-            Some(other) => panic!("ERR: invalid `type` in `citation`: {:?}", other),
             None => return Err(Error::MissingAttribute("type", "citation")),
+            Some(other) => return Err(
+                Error::invalid_value("type", "citation", String::from_utf8_lossy(other))
+            ),
         };
 
         // create the citation
@@ -296,4 +299,21 @@ pub enum SourceType {
     Plasmid,
     Transposon,
     Tissue,
+}
+
+impl FromStr for CitationType {
+    type Err = crate::error::ValueError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::CitationType::*;
+        match s {
+            "book" => Ok(Book),
+            "journal article" => Ok(JournalArticle),
+            "online journal article" => Ok(OnlineJournalArticle),
+            "patent" => Ok(Patent),
+            "submission" => Ok(Submission),
+            "thesis" => Ok(Thesis),
+            "unpublished observations" => Ok(UnpublishedObservations),
+            other => Err(ValueError(String::from(other))),
+        }
+    }
 }

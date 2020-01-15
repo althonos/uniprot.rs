@@ -9,23 +9,42 @@ use url::ParseError as ParseUrlError;
 use quick_xml::Error as XmlError;
 
 #[derive(Debug, Error)]
+/// The main error type for the `uniprot` crate.
 pub enum Error {
     #[error(display = "xml error: {}", 0)]
-    XmlError(#[error(source)] XmlError),
+    Xml(#[error(source)] XmlError),
     #[error(display = "parser error: {}", 0)]
-    ParseIntError(#[error(source)] ParseIntError),
+    ParseInt(#[error(source)] ParseIntError),
     #[error(display = "parser error: {}", 0)]
-    ParseBoolError(#[error(source)] ParseBoolError),
+    ParseBool(#[error(source)] ParseBoolError),
     #[error(display = "parser error: {}", 0)]
-    ParseUrlError(#[error(source)] ParseUrlError),
+    ParseUrl(#[error(source)] ParseUrlError),
     #[error(display = "missing element `{}` in `{}`", 0, 1)]
     MissingElement(&'static str, &'static str),
     #[error(display = "missing attribute `{}` in `{}`", 0, 1)]
     MissingAttribute(&'static str, &'static str),
     #[error(display = "duplicate element `{}` in `{}`", 0, 1)]
     DuplicateElement(&'static str, &'static str),
+    #[error(display = "invalid value for attribute `{}` in `{}`", 0, 1)]
+    InvalidValue(&'static str, &'static str, ValueError)
 }
 
-// pub type Error = XmlError;
+impl Error {
+    pub fn invalid_value<S: Into<String>>(
+        name: &'static str,
+        elem: &'static str,
+        value: S
+    ) -> Self {
+        Error::InvalidValue(name, elem, ValueError(value.into()))
+    }
+}
 
+/// The main result type for the `uniprot crate`
 pub type Result<T> = std::result::Result<T, Error>;
+
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Error)]
+#[error(display = "invalid value: {}", 0)]
+/// The error type for types with constrained values.
+pub struct ValueError(pub String);

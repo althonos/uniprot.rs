@@ -12,7 +12,7 @@ use crate::parser::utils::extract_attribute;
 use super::db_reference::DbReference;
 
 #[derive(Debug, Clone)]
-/// Describes the evidence for an annotation.
+/// The evidence for an annotation.
 pub struct Evidence {
     pub key: usize,
     pub ty: String,
