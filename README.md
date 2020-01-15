@@ -11,7 +11,7 @@
 [![Crate](https://img.shields.io/crates/v/uniprot.svg?maxAge=600&style=flat-square)](https://crates.io/crates/uniprot)
 [![Documentation](https://img.shields.io/badge/docs.rs-latest-4d76ae.svg?maxAge=2678400&style=flat-square)](https://docs.rs/uniprot)
 [![Changelog](https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/uniprot.rs/blob/master/CHANGELOG.md)
-
+[![GitHub issues](https://img.shields.io/github/issues/althonos/uniprot.rs.svg?style=flat-square&maxAge=600)](https://github.com/althonos/uniprot.rs/issues)
 
 ## Usage
 
@@ -36,23 +36,6 @@ implementor can be used as an input, so the database files can be streamed
 directly from their [online location](https://www.uniprot.org/downloads) with
 the help of an HTTP library such as [`reqwest`](https://docs.rs/reqwest), or
 using the [`ftp`](https://docs.rs/ftp) library.
-
-Some `entry` children elements can be ignored to speed up the whole process:
-```rust
-extern crate uniprot;
-
-let f = std::fs::File::open("tests/uniprot.xml")
-   .map(std::io::Buffer::new)
-   .unwrap();
-
-for r in uniprot::parse(f).ignore("comment").ignore("feature") {
-   let entry = r.unwrap();
-   assert!(entry.comments.is_empty())
-   // ... process the Uniprot entry ...
-}
-```
-
-## Examples
 
 See the online documentation at [`docs.rs`](https://docs.rs/uniprot) for more examples.
 

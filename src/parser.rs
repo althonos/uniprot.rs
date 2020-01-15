@@ -1,3 +1,5 @@
+//!
+
 use std::collections::HashSet;
 use std::io::BufRead;
 
@@ -172,6 +174,7 @@ pub(crate) mod utils {
 
 // ---------------------------------------------------------------------------
 
+/// A parser for the Uniprot XML format that parses entries iteratively.
 pub struct UniprotParser<B: BufRead> {
     xml: Reader<B>,
     buffer: Vec<u8>,
@@ -185,9 +188,9 @@ impl<B: BufRead> UniprotParser<B> {
     ///
     /// This can be useful to speed-up the parser if you are only interested
     /// in particular elements, and you want the parser to only process these.
-    /// **Note that element names must be given as they appear in the XML,
+    /// *Note that element names must be given as they appear in the XML,
     /// like `organismHost` or `reference`, and not like they appear as fields
-    /// of the `Entry` structure.**
+    /// of the `Entry` structure.*
     ///
     /// # Example
     /// ```rust

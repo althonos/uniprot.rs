@@ -1,3 +1,5 @@
+//! Ubiquitous types for error management.
+
 use std::error::Error as StdError;
 use std::num::ParseIntError;
 use std::str::ParseBoolError;
