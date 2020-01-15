@@ -22,7 +22,7 @@ impl FromXml for Molecule {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"molecule");
 
-        match extract_attribute(event, &b"type"[..])? {
+        match extract_attribute(event, "type")? {
             None => reader.read_text(b"molecule", buffer)
                 .map(Molecule::Name)
                 .map_err(Error::from),

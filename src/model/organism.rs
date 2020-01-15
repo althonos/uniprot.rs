@@ -70,7 +70,7 @@ impl FromXml for Name {
         debug_assert_eq!(event.local_name(), b"name");
 
         let value = reader.read_text(b"name", buffer)?;
-        match extract_attribute(event, &b"type"[..])?.as_ref().map(|a| &*a.value) {
+        match extract_attribute(event, "type")?.as_ref().map(|a| &*a.value) {
             Some(b"common") => Ok(Name::Common(value)),
             Some(b"full") => Ok(Name::Full(value)),
             Some(b"scientific") => Ok(Name::Scientific(value)),

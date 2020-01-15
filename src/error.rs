@@ -26,7 +26,7 @@ pub enum Error {
     #[error(display = "duplicate element `{}` in `{}`", 0, 1)]
     DuplicateElement(&'static str, &'static str),
     #[error(display = "invalid value for attribute `{}` in `{}`", 0, 1)]
-    InvalidValue(&'static str, &'static str, ValueError)
+    InvalidValue(&'static str, &'static str, #[error(source)] InvalidValue)
 }
 
 impl Error {
@@ -35,7 +35,7 @@ impl Error {
         elem: &'static str,
         value: S
     ) -> Self {
-        Error::InvalidValue(name, elem, ValueError(value.into()))
+        Error::InvalidValue(name, elem, InvalidValue(value.into()))
     }
 }
 
@@ -44,7 +44,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Error)]
+#[derive(Default, Debug, Clone, Error, PartialEq, Eq)]
 #[error(display = "invalid value: {}", 0)]
 /// The error type for types with constrained values.
-pub struct ValueError(pub String);
+pub struct InvalidValue(pub String);
+
+impl<S: Into<String>> From<S> for InvalidValue {
+    fn from(s: S) -> Self {
+        InvalidValue(s.into())
+    }
+}

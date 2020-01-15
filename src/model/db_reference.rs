@@ -5,7 +5,7 @@ use quick_xml::events::BytesStart;
 
 use crate::error::Error;
 use crate::parser::FromXml;
-use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 
 use super::molecule::Molecule;
 use super::property::Property;
@@ -35,17 +35,17 @@ impl FromXml for DbReference {
             },
             e @ b"molecule" => {
                 let molecule = Molecule::from_xml(&e, reader, buffer)?;
-                if let Some(_) = db_reference.molecule.replace(molecule) {
+                if db_reference.molecule.replace(molecule).is_some() {
                     return Err(Error::DuplicateElement("molecule", "dbReference"))
                 }
             }
         }
 
-        let attr = attributes_to_hashmap(event)?;
-        db_reference.ty = attr.get(&b"type"[..])
+        // let attr = attributes_to_hashmap(event)?;
+        db_reference.ty = extract_attribute(event, "type")?
             .ok_or(Error::MissingAttribute("type", "dbReference"))?
             .unescape_and_decode_value(reader)?;
-        db_reference.id = attr.get(&b"id"[..])
+        db_reference.id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "dbReference"))?
             .unescape_and_decode_value(reader)?;
 

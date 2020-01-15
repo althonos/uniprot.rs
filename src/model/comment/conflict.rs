@@ -5,9 +5,11 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::decode_attribute;
 
 #[derive(Debug, Clone)]
 pub struct Conflict {
@@ -69,6 +71,8 @@ impl FromXml for Conflict {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub enum ConflictType {
     Frameshift,
@@ -78,6 +82,8 @@ pub enum ConflictType {
     ErroneousTranslation,
     MiscellaneousDiscrepancy
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub struct ConflictSequence {
@@ -120,22 +126,28 @@ impl FromXml for ConflictSequence {
             .transpose()?
             .map(|s| usize::from_str(&s))
             .transpose()?;
-        let resource = match attr.get(&b"resource"[..]).map(|a| &*a.value) {
-            Some(b"EMBL") => Resource::Embl,
-            Some(b"EMBL-CDS") => Resource::EmblCds,
-            None => return Err(Error::MissingAttribute("resource", "sequence")),
-            Some(other) => return Err(
-                Error::invalid_value("resource", "sequence", String::from_utf8_lossy(other))
-            ),
-        };
+        let res = decode_attribute(event, reader, "resource", "sequence")?;
 
         reader.read_to_end(b"sequence", buffer)?;
-        Ok(ConflictSequence::with_version(id, resource, version))
+        Ok(ConflictSequence::with_version(id, res, version))
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum Resource {
     Embl,
     EmblCds,
+}
+
+impl FromStr for Resource {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "EMBL" => Ok(Resource::Embl),
+            "EMBL-CDS" => Ok(Resource::EmblCds),
+            other => Err(InvalidValue::from(other)),
+        }
+    }
 }

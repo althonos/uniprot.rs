@@ -100,7 +100,7 @@ impl FromXml for Source {
         if let Some(db_reference) = optdbref {
             Ok(Source::DbRef(db_reference))
         } else {
-            extract_attribute(event, b"ref")?
+            extract_attribute(event, "ref")?
                 .ok_or(Error::MissingAttribute("ref", "source"))
                 .and_then(|a| a.unescape_and_decode_value(reader).map_err(Error::from))
                 .and_then(|s| usize::from_str(&s).map_err(Error::from))

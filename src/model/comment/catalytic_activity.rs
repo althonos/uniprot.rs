@@ -5,9 +5,11 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::decode_attribute;
 
 use super::super::db_reference::DbReference;
 
@@ -25,6 +27,8 @@ impl CatalyticActivity {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub struct Reaction {
@@ -76,6 +80,8 @@ impl FromXml for Reaction {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 /// Describes a physiological reaction.
 pub struct PhysiologicalReaction {
@@ -96,14 +102,12 @@ impl FromXml for PhysiologicalReaction {
 
         let attr = attributes_to_hashmap(event)?;
         let evidences = get_evidences(reader, &attr)?;
-        let direction = match attr.get(&b"direction"[..]).map(|a| &*a.value) {
-            Some(b"left-to-right") => LeftToRight,
-            Some(b"right-to-left")=> RightToLeft,
-            None => return Err(Error::MissingAttribute("direction", "PhysiologicalReaction")),
-            Some(other) => return Err(
-                Error::invalid_value("direction", "physiologicalReaction", String::from_utf8_lossy(other))
-            ),
-        };
+        let direction = decode_attribute(
+            event,
+            reader,
+            "direction",
+            "physiologicalReaction"
+        )?;
 
         let mut optdbref = None;
         parse_inner!{event, reader, buffer,
@@ -121,8 +125,21 @@ impl FromXml for PhysiologicalReaction {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub enum Direction {
     LeftToRight,
     RightToLeft
+}
+
+impl FromStr for Direction {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "left-to-right" => Ok(Direction::LeftToRight),
+            "right-to-left" => Ok(Direction::RightToLeft),
+            other => Err(InvalidValue::from(other))
+        }
+    }
 }

@@ -113,7 +113,7 @@ impl FromXml for LocationName {
         debug_assert_eq!(event.local_name(), b"name");
 
         let value = reader.read_text(b"name", buffer)?;
-        let status = match extract_attribute(event, &b"status"[..])?
+        let status = match extract_attribute(event, "status")?
             .as_ref()
             .map(|a| &*a.value)
         {

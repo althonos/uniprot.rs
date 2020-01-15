@@ -17,6 +17,8 @@ pub struct BiophysicochemicalProperties {
     pub temperature_dependence: Option<String>,
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Default, Clone)]
 pub struct Absorption {
     pub max: Option<String>, // FIXME: evidence string
@@ -57,6 +59,8 @@ impl FromXml for Absorption {
         Ok(absorption)
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Default, Clone)]
 pub struct Kinetics {

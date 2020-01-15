@@ -5,9 +5,11 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::get_evidences;
 use crate::parser::utils::extract_attribute;
+use crate::parser::utils::decode_attribute;
 
 #[derive(Debug, Clone, Default)]
 /// Describes the names for the protein and parts thereof.
@@ -124,6 +126,21 @@ impl Default for ProteinExistence {
     }
 }
 
+impl FromStr for ProteinExistence {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::ProteinExistence::*;
+        match s {
+            "evidence at protein level" => Ok(ProteinLevelEvidence),
+            "evidence at transcript level" => Ok(TranscriptLevelEvidence),
+            "inferred from homology" => Ok(HomologyInferred),
+            "predicted" => Ok(Predicted),
+            "uncertain" => Ok(Uncertain),
+            other => Err(InvalidValue::from(other)),
+        }
+    }
+}
+
 impl FromXml for ProteinExistence {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
@@ -131,23 +148,7 @@ impl FromXml for ProteinExistence {
         buffer: &mut Vec<u8>
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"proteinExistence");
-
-        use self::ProteinExistence::*;
-
         reader.read_to_end(event.local_name(), buffer)?;
-        match extract_attribute(event, &b"type"[..])?
-            .as_ref()
-            .map(|a| &*a.value)
-        {
-            Some(b"evidence at protein level") => Ok(ProteinLevelEvidence),
-            Some(b"evidence at transcript level") => Ok(TranscriptLevelEvidence),
-            Some(b"inferred from homology") => Ok(HomologyInferred),
-            Some(b"predicted") => Ok(Predicted),
-            Some(b"uncertain") => Ok(Uncertain),
-            None => return Err(Error::MissingAttribute("type", "proteinExistence")),
-            Some(other) => return Err(
-                Error::invalid_value("other", "ProteinExistence", String::from_utf8_lossy(other))
-            )
-        }
+        decode_attribute(event, reader, "type", "proteinExistence")
     }
 }

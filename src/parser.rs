@@ -2,6 +2,7 @@
 
 use std::collections::HashSet;
 use std::io::BufRead;
+use std::str::FromStr;
 
 use bytes::Bytes;
 use quick_xml::Reader;
@@ -43,6 +44,13 @@ macro_rules! parse_inner {
                 Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
                     break;
                 }
+                Ok(Event::End(ref e)) => {
+                    let expected = $event.unescaped()
+                        .map(|s| String::from_utf8_lossy(s.as_ref()).to_string())?;
+                    let found = String::from_utf8_lossy(e.name()).to_string();
+                    let e = XmlError::EndEventMismatch { expected, found };
+                    return Err(Error::from(e));
+                }
                 _ => continue,
             }
         }
@@ -80,9 +88,7 @@ macro_rules! parse_inner_ignoring {
                     let e = String::from_utf8_lossy($event.local_name()).to_string();
                     return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
-                Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
-                    break;
-                }
+                Ok(Event::End(_)) => break,
                 _ => continue,
             }
         }
@@ -156,9 +162,9 @@ pub(crate) mod utils {
             .collect()
     }
 
-    pub(crate) fn extract_attribute<'a>(event: &'a BytesStart<'a>, name: &[u8]) -> Result<Option<Attribute<'a>>, Error> {
+    pub(crate) fn extract_attribute<'a>(event: &'a BytesStart<'a>, name: &str) -> Result<Option<Attribute<'a>>, Error> {
         event.attributes()
-            .find(|r| r.is_err() || r.as_ref().ok().map_or(false, |a| a.key == name))
+            .find(|r| r.is_err() || r.as_ref().ok().map_or(false, |a| a.key == name.as_bytes()))
             .transpose()
             .map_err(Error::from)
     }
@@ -169,6 +175,33 @@ pub(crate) mod utils {
             .transpose()?
             .map(|e| e.split(' ').map(usize::from_str).collect::<Result<Vec<_>, _>>().map_err(Error::from))
             .unwrap_or_else(|| Ok(Vec::new()))
+    }
+
+    /// Decode the attribute `name` from `event.attributes()`.
+    ///
+    /// This functions uses an `unsafe` block to decode the attribute value
+    /// *only* when `FromStr::from_str` fails, given that all enum types of
+    /// this library only accept ASCII values.
+    pub(crate) fn decode_attribute<'a, B: BufRead, T: FromStr>(
+        event: &'a BytesStart<'a>,
+        reader: &mut Reader<B>,
+        name: &'static str,
+        element: &'static str,
+    ) -> Result<T, Error> {
+        unsafe {
+            let a = extract_attribute(event, name)?
+                .ok_or(Error::MissingAttribute(name, element))?;
+
+            // perform decoding only on error, since valid enum variants
+            // can only be obtained from valid UTF-8 anyway.
+            let s = std::str::from_utf8_unchecked(&*a.value);
+            T::from_str(s)
+                .map_err(|_| a.unescape_and_decode_value(reader)
+                    .map_or_else(
+                        Error::from,
+                        |s| Error::invalid_value(name, element, s)
+                    ))
+        }
     }
 }
 

@@ -5,15 +5,20 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 
 #[derive(Debug, Default, Clone)]
 pub struct AlternativeProduct {
     pub events: Vec<Event>,
     pub isoforms: Vec<Isoform>,
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -23,31 +28,33 @@ pub enum Event {
     RibosomalFrameshifting,
 }
 
-impl FromXml for Event {
-    fn from_xml<B: BufRead>(
-        event: &BytesStart,
-        _reader: &mut Reader<B>,
-        _buffer: &mut Vec<u8>,
-    ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"event");
-
-        match event.attributes()
-            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"type").unwrap_or_default())
-            .transpose()?
-            .as_ref()
-            .map(|a| &*a.value)
-        {
-            Some(b"alternative splicing") => Ok(Event::AlternativeSplicing),
-            Some(b"alternative initiation") => Ok(Event::AlternativeInitiation),
-            Some(b"alternative promoter") => Ok(Event::AlternativePromoter),
-            Some(b"ribosomal frameshifting") => Ok(Event::RibosomalFrameshifting),
-            None => return Err(Error::MissingAttribute("type", "event")),
-            Some(other) => return Err(
-                Error::invalid_value("type", "event", String::from_utf8_lossy(other))
-            )
+impl FromStr for Event {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::Event::*;
+        match s {
+            "alternative splicing" => Ok(AlternativeSplicing),
+            "alternative initiation" => Ok(AlternativeInitiation),
+            "alternative promoter" => Ok(AlternativePromoter),
+            "ribosomal frameshifting" => Ok(RibosomalFrameshifting),
+            other => Err(InvalidValue::from(other)),
         }
     }
 }
+
+impl FromXml for Event {
+    fn from_xml<B: BufRead>(
+        event: &BytesStart,
+        reader: &mut Reader<B>,
+        buffer: &mut Vec<u8>,
+    ) -> Result<Self, Error> {
+        debug_assert_eq!(event.local_name(), b"event");
+        reader.read_to_end(b"event", buffer)?;
+        decode_attribute(event, reader, "type", "event")
+    }
+}
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub struct Isoform {
@@ -110,6 +117,8 @@ impl FromXml for Isoform {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub struct IsoformSequence {
     pub ty: IsoformSequenceType,
@@ -140,30 +149,17 @@ impl FromXml for IsoformSequence {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"sequence");
 
-        use self::IsoformSequenceType::*;
+        reader.read_to_end(b"sequence", buffer)?;
 
-        let attr = attributes_to_hashmap(event)?;
-        let mut seq = match attr.get(&b"type"[..]).map(|x| &*x.value) {
-            Some(b"not described") => IsoformSequence::new(NotDescribed),
-            Some(b"described") => IsoformSequence::new(Described),
-            Some(b"displayed") => IsoformSequence::new(Displayed),
-            Some(b"external") => IsoformSequence::new(External),
-            None => return Err(Error::MissingAttribute("type", "sequence")),
-            Some(other) => return Err(
-                Error::invalid_value("type", "sequence", String::from_utf8_lossy(other))
-            ),
-        };
-
-        // extract optional reference
-        seq.reference = attr.get(&b"ref"[..])
+        let reference = extract_attribute(event, "ref")?
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?;
-
-        // read to end
-        reader.read_to_end(b"sequence", buffer)?;
-        Ok(seq)
+        decode_attribute(event, reader, "type", "sequence")
+            .map(|ty| Self::with_reference(ty, reference))
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum IsoformSequenceType {
@@ -171,4 +167,18 @@ pub enum IsoformSequenceType {
     Described,
     Displayed,
     External
+}
+
+impl FromStr for IsoformSequenceType {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::IsoformSequenceType::*;
+        match s {
+            "not described" => Ok(NotDescribed),
+            "described" => Ok(Described),
+            "displayed" => Ok(Displayed),
+            "external" => Ok(External),
+            other => Err(InvalidValue::from(other)),
+        }
+    }
 }

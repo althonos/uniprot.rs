@@ -5,7 +5,7 @@ use quick_xml::events::BytesStart;
 
 use crate::error::Error;
 use crate::parser::FromXml;
-use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 
 #[derive(Debug, Default, Clone)]
 pub struct Property {
@@ -27,13 +27,11 @@ impl FromXml for Property {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"property");
 
-        let attr = attributes_to_hashmap(event)?;
         reader.read_to_end(b"property", buffer)?;
-
-        let ty = attr.get(&b"type"[..])
+        let ty = extract_attribute(event, "type")?
             .ok_or(Error::MissingAttribute("type", "property"))?
             .unescape_and_decode_value(reader)?;
-        let value = attr.get(&b"value"[..])
+        let value = extract_attribute(event, "value")?
             .ok_or(Error::MissingAttribute("value", "property"))?
             .unescape_and_decode_value(reader)?;
 

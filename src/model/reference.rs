@@ -5,7 +5,7 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
-use crate::error::ValueError;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
@@ -302,7 +302,7 @@ pub enum SourceType {
 }
 
 impl FromStr for CitationType {
-    type Err = crate::error::ValueError;
+    type Err = crate::error::InvalidValue;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use self::CitationType::*;
         match s {
@@ -313,7 +313,7 @@ impl FromStr for CitationType {
             "submission" => Ok(Submission),
             "thesis" => Ok(Thesis),
             "unpublished observations" => Ok(UnpublishedObservations),
-            other => Err(ValueError(String::from(other))),
+            other => Err(InvalidValue(String::from(other))),
         }
     }
 }
