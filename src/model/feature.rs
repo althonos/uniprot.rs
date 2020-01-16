@@ -5,8 +5,10 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 
 use super::feature_location::FeatureLocation;
@@ -76,52 +78,10 @@ impl FromXml for Feature {
         // assume the location was found and extract the feature type
         let location = optloc
             .ok_or(Error::MissingAttribute("location", "feature"))?;
-        let mut feature = match attr.get(&b"type"[..]).map(|a| &*a.value)
-            .ok_or(Error::MissingAttribute("type", "feature"))?
-        {
-            b"active site" => Feature::new(ActiveSite, location),
-            b"binding site" => Feature::new(BindingSite, location),
-            b"calcium-binding region" => Feature::new(CalciumBindingRegion, location),
-            b"chain" => Feature::new(Chain, location),
-            b"coiled-coil region" => Feature::new(CoiledCoilRegion, location),
-            b"compositionally biased region" => Feature::new(CompositionallyBiasedRegion, location),
-            b"cross-link" => Feature::new(CrossLink, location),
-            b"disulfide bond" => Feature::new(DisulfideBond, location),
-            b"DNA-binding region" => Feature::new(DnaBindingRegion, location),
-            b"domain" => Feature::new(Domain, location),
-            b"glycosylation site" => Feature::new(GlycosylationSite, location),
-            b"helix" => Feature::new(Helix, location),
-            b"initiator methionine" => Feature::new(InitiatorMethionine, location),
-            b"lipid moiety-binding region" => Feature::new(LipidMoietyBindingRegion, location),
-            b"metal ion-binding site" => Feature::new(MetalIonBindingSite, location),
-            b"modified residue" => Feature::new(ModifiedResidue, location),
-            b"mutagenesis site" => Feature::new(MutagenesisSite, location),
-            b"non-consecutive residues" => Feature::new(NonConsecutiveResidues, location),
-            b"non-terminal residue" => Feature::new(NonTerminalResidue, location),
-            b"nucleotide phosphate-binding region" => Feature::new(NucleotidePhosphateBindingRegion, location),
-            b"peptide" => Feature::new(Peptide, location),
-            b"propeptide" => Feature::new(Propeptide, location),
-            b"region of interest" => Feature::new(RegionOfInterest, location),
-            b"repeat" => Feature::new(Repeat, location),
-            b"non-standard amino acid" => Feature::new(NonStandardAminoAcid, location),
-            b"sequence conflict" => Feature::new(SequenceConflict, location),
-            b"sequence variant" => Feature::new(SequenceVariant, location),
-            b"short sequence motif" => Feature::new(ShortSequenceMotif, location),
-            b"signal peptide" => Feature::new(SignalPeptide, location),
-            b"site" => Feature::new(Site, location),
-            b"splice variant" => Feature::new(Site, location),
-            b"strand" => Feature::new(Strand, location),
-            b"topological domain" => Feature::new(TopologicalDomain, location),
-            b"transit peptide" => Feature::new(TransitPeptide, location),
-            b"transmembrane region" => Feature::new(TransmembraneRegion, location),
-            b"turn" => Feature::new(Turn, location),
-            b"unsure residue" => Feature::new(UnsureResidue, location),
-            b"zinc finger region" => Feature::new(ZincFingerRegion, location),
-            b"intramembrane region" => Feature::new(IntramembraneRegion, location),
-            other => return Err(
-                Error::invalid_value("type", "feature", String::from_utf8_lossy(other))
-            )
-        };
+
+        // create a new Feature with the right `type`
+        let mut feature = decode_attribute(event, reader, "type", "feature")
+            .map(|ty| Feature::new(ty, location))?;
 
         // extract optional attributes
         feature.id = attr.get(&b"id"[..])
@@ -140,6 +100,8 @@ impl FromXml for Feature {
         Ok(feature)
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum FeatureType {
@@ -182,4 +144,53 @@ pub enum FeatureType {
     UnsureResidue,
     ZincFingerRegion,
     IntramembraneRegion
+}
+
+impl FromStr for FeatureType {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::FeatureType::*;
+        match s {
+            "active site" => Ok(ActiveSite),
+            "binding site" => Ok(BindingSite),
+            "calcium-binding region" => Ok(CalciumBindingRegion),
+            "chain" => Ok(Chain),
+            "coiled-coil region" => Ok(CoiledCoilRegion),
+            "compositionally biased region" => Ok(CompositionallyBiasedRegion),
+            "cross-link" => Ok(CrossLink),
+            "disulfide bond" => Ok(DisulfideBond),
+            "DNA-binding region" => Ok(DnaBindingRegion),
+            "domain" => Ok(Domain),
+            "glycosylation site" => Ok(GlycosylationSite),
+            "helix" => Ok(Helix),
+            "initiator methionine" => Ok(InitiatorMethionine),
+            "lipid moiety-binding region" => Ok(LipidMoietyBindingRegion),
+            "metal ion-binding site" => Ok(MetalIonBindingSite),
+            "modified residue" => Ok(ModifiedResidue),
+            "mutagenesis site" => Ok(MutagenesisSite),
+            "non-consecutive residues" => Ok(NonConsecutiveResidues),
+            "non-terminal residue" => Ok(NonTerminalResidue),
+            "nucleotide phosphate-binding region" => Ok(NucleotidePhosphateBindingRegion),
+            "peptide" => Ok(Peptide),
+            "propeptide" => Ok(Propeptide),
+            "region of interest" => Ok(RegionOfInterest),
+            "repeat" => Ok(Repeat),
+            "non-standard amino acid" => Ok(NonStandardAminoAcid),
+            "sequence conflict" => Ok(SequenceConflict),
+            "sequence variant" => Ok(SequenceVariant),
+            "short sequence motif" => Ok(ShortSequenceMotif),
+            "signal peptide" => Ok(SignalPeptide),
+            "site" => Ok(Site),
+            "splice variant" => Ok(Site),
+            "strand" => Ok(Strand),
+            "topological domain" => Ok(TopologicalDomain),
+            "transit peptide" => Ok(TransitPeptide),
+            "transmembrane region" => Ok(TransmembraneRegion),
+            "turn" => Ok(Turn),
+            "unsure residue" => Ok(UnsureResidue),
+            "zinc finger region" => Ok(ZincFingerRegion),
+            "intramembrane region" => Ok(IntramembraneRegion),
+            other => Err(InvalidValue::from(other)),
+        }
+    }
 }

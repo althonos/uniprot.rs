@@ -8,7 +8,7 @@ use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::get_evidences;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
 
 #[derive(Debug, Clone)]
@@ -36,24 +36,12 @@ impl FromXml for Conflict {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"conflict");
 
-        use self::ConflictType::*;
-
-        let attr = attributes_to_hashmap(event)?;
-        let mut conflict = match attr.get(&b"type"[..]).map(|x| &*x.value) {
-            Some(b"frameshift") => Conflict::new(Frameshift),
-            Some(b"erroneous initiation") => Conflict::new(ErroneousInitiation),
-            Some(b"erroneous termination") => Conflict::new(ErroneousTermination),
-            Some(b"erroneous gene model prediction") => Conflict::new(ErroneousGeneModelPrediction),
-            Some(b"erroneous translation") => Conflict::new(ErroneousTranslation),
-            Some(b"miscellaneous discrepancy") => Conflict::new(MiscellaneousDiscrepancy),
-            None => return Err(Error::MissingAttribute("type", "conflict")),
-            Some(other) =>  return Err(
-                Error::invalid_value("type", "conflict", String::from_utf8_lossy(other))
-            ),
-        };
+        // create a new `Conflict` with the right type
+        let mut conflict = decode_attribute(event, reader, "type", "conflict")
+            .map(Conflict::new)?;
 
         // extract optional reference
-        conflict.reference = attr.get(&b"ref"[..])
+        conflict.reference = extract_attribute(event, "type")?
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?;
 
@@ -81,6 +69,22 @@ pub enum ConflictType {
     ErroneousGeneModelPrediction,
     ErroneousTranslation,
     MiscellaneousDiscrepancy
+}
+
+impl FromStr for ConflictType {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::ConflictType::*;
+        match s {
+            "frameshift" => Ok(Frameshift),
+            "erroneous initiation" => Ok(ErroneousInitiation),
+            "erroneous termination" => Ok(ErroneousTermination),
+            "erroneous gene model prediction" => Ok(ErroneousGeneModelPrediction),
+            "erroneous translation" => Ok(ErroneousTranslation),
+            "miscellaneous discrepancy" => Ok(MiscellaneousDiscrepancy),
+            other => Err(InvalidValue::from(other)),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

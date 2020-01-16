@@ -5,9 +5,11 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::extract_attribute;
+use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 
 #[derive(Debug, Clone)]
@@ -37,27 +39,10 @@ impl FromXml for GeneLocation {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"geneLocation");
 
-        use self::LocationType::*;
+        let mut geneloc = decode_attribute(event, reader, "type", "geneLocation")
+            .map(Self::new)?;
 
         let attr = attributes_to_hashmap(event)?;
-        let loctype = match attr.get(&b"type"[..]).map(|a| &*a.value) {
-            Some(b"apicoplast") => Apicoplast,
-            Some(b"chloroplast") => Chloroplast,
-            Some(b"organellar chromatophore") => OrganellarChromatophore,
-            Some(b"cyanelle") => Cyanelle,
-            Some(b"hydrogenosome") => Hydrogenosome,
-            Some(b"mitochondrion") => Mitochondrion,
-            Some(b"non-photosynthetic plastid") => NonPhotosyntheticPlasmid,
-            Some(b"nucleomorph") => Nucleomorph,
-            Some(b"plasmid") => Plasmid,
-            Some(b"plastid") => Plastid,
-            None => return Err(Error::MissingAttribute("type", "geneLocation")),
-            Some(other) => return Err(
-                Error::invalid_value("type", "geneLocation", String::from_utf8_lossy(other))
-            )
-        };
-
-        let mut geneloc = Self::new(loctype);
         geneloc.evidences = get_evidences(reader, &attr)?;
         parse_inner!{event, reader, buffer,
             e @ b"name" => {
@@ -68,6 +53,8 @@ impl FromXml for GeneLocation {
         Ok(geneloc)
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum LocationType {
@@ -82,6 +69,28 @@ pub enum LocationType {
     Plasmid,
     Plastid,
 }
+
+impl FromStr for LocationType {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::LocationType::*;
+        match s {
+            "apicoplast" => Ok(Apicoplast),
+            "chloroplast" => Ok(Chloroplast),
+            "organellar chromatophore" => Ok(OrganellarChromatophore),
+            "cyanelle" => Ok(Cyanelle),
+            "hydrogenosome" => Ok(Hydrogenosome),
+            "mitochondrion" => Ok(Mitochondrion),
+            "non-photosynthetic plastid" => Ok(NonPhotosyntheticPlasmid),
+            "nucleomorph" => Ok(Nucleomorph),
+            "plasmid" => Ok(Plasmid),
+            "plastid" => Ok(Plastid),
+            other => Err(InvalidValue::from(other))
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub struct LocationName {
@@ -113,21 +122,17 @@ impl FromXml for LocationName {
         debug_assert_eq!(event.local_name(), b"name");
 
         let value = reader.read_text(b"name", buffer)?;
-        let status = match extract_attribute(event, "status")?
-            .as_ref()
-            .map(|a| &*a.value)
-        {
-            Some(b"known") => LocationStatus::Known,
-            Some(b"unknown") => LocationStatus::Unknown,
-            None => LocationStatus::default(),
-            Some(other) => return Err(
-                Error::invalid_value("status", "name", String::from_utf8_lossy(other))
-            )
+        let status = match decode_attribute(event, reader, "status", "name") {
+            Err(Error::MissingAttribute(_, _)) => Default::default(),
+            Err(err) => return Err(err),
+            Ok(status) => status,
         };
 
         Ok(Self::with_status(value, status))
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum LocationStatus {
@@ -138,5 +143,16 @@ pub enum LocationStatus {
 impl Default for LocationStatus {
     fn default() -> Self {
         LocationStatus::Known
+    }
+}
+
+impl FromStr for LocationStatus {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "known" => Ok(LocationStatus::Known),
+            "unknown" => Ok(LocationStatus::Unknown),
+            other => Err(InvalidValue::from(other)),
+        }
     }
 }

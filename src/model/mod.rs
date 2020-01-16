@@ -173,6 +173,7 @@ impl FromXml for Entry {
     }
 }
 
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 /// The differents datasets an `Entry` can be part of.

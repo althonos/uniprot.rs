@@ -5,9 +5,11 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::extract_attribute;
+use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 
 use super::db_reference::DbReference;
@@ -52,13 +54,21 @@ impl FromXml for Organism {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
-pub enum Name {
-    Common(String),
-    Full(String),
-    Scientific(String),
-    Synonym(String),
-    Abbreviation(String),
+pub struct Name {
+    pub value: String,
+    pub ty: NameType,
+}
+
+impl Name {
+    pub fn new(value: String, ty: NameType) -> Self {
+        Self {
+            value,
+            ty
+        }
+    }
 }
 
 impl FromXml for Name {
@@ -70,19 +80,35 @@ impl FromXml for Name {
         debug_assert_eq!(event.local_name(), b"name");
 
         let value = reader.read_text(b"name", buffer)?;
-        match extract_attribute(event, "type")?.as_ref().map(|a| &*a.value) {
-            Some(b"common") => Ok(Name::Common(value)),
-            Some(b"full") => Ok(Name::Full(value)),
-            Some(b"scientific") => Ok(Name::Scientific(value)),
-            Some(b"synonym") => Ok(Name::Synonym(value)),
-            Some(b"abbreviation") => Ok(Name::Abbreviation(value)),
-            None => Err(Error::MissingAttribute("type", "name")),
-            Some(other) => Err(
-                Error::invalid_value("type", "name", String::from_utf8_lossy(other)),
-            )
+        let ty = decode_attribute(event, reader, "type", "name")?;
+        Ok(Name::new(value, ty))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum NameType {
+    Common,
+    Full,
+    Scientific,
+    Synonym,
+    Abbreviation,
+}
+
+impl FromStr for NameType {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "common" => Ok(NameType::Common),
+            "full" => Ok(NameType::Full),
+            "scientific" => Ok(NameType::Scientific),
+            "synonym" => Ok(NameType::Synonym),
+            "abbreviation" => Ok(NameType::Abbreviation),
+            other => Err(InvalidValue::from(other)),
         }
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Default, Clone)]
 pub struct Lineage {

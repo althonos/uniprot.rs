@@ -9,6 +9,7 @@ use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::decode_attribute;
 
 use super::db_reference::DbReference;
 
@@ -75,6 +76,8 @@ impl FromXml for Reference {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 /// Describes a single citation.
 pub struct Citation {
@@ -140,19 +143,7 @@ impl FromXml for Citation {
         let attr = attributes_to_hashmap(event)?;
 
         // get citation type
-        let ty = match attr.get(&b"type"[..]).map(|a| &*a.value) {
-            Some(b"book") => Book,
-            Some(b"journal article") => JournalArticle,
-            Some(b"online journal article") => OnlineJournalArticle,
-            Some(b"patent") => Patent,
-            Some(b"submission") => Submission,
-            Some(b"thesis") => Thesis,
-            Some(b"unpublished observations") => UnpublishedObservations,
-            None => return Err(Error::MissingAttribute("type", "citation")),
-            Some(other) => return Err(
-                Error::invalid_value("type", "citation", String::from_utf8_lossy(other))
-            ),
-        };
+        let ty = decode_attribute(event, reader, "type", "citation")?;
 
         // create the citation
         let mut citation = Citation::new(ty);
@@ -210,6 +201,8 @@ impl FromXml for Citation {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub enum CitationType {
     Book,
@@ -221,6 +214,25 @@ pub enum CitationType {
     UnpublishedObservations,
 }
 
+impl FromStr for CitationType {
+    type Err = crate::error::InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use self::CitationType::*;
+        match s {
+            "book" => Ok(Book),
+            "journal article" => Ok(JournalArticle),
+            "online journal article" => Ok(OnlineJournalArticle),
+            "patent" => Ok(Patent),
+            "submission" => Ok(Submission),
+            "thesis" => Ok(Thesis),
+            "unpublished observations" => Ok(UnpublishedObservations),
+            other => Err(InvalidValue(String::from(other))),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub enum Creator {
     /// Describes the author of a citation when these are represented by a consortium.
@@ -228,6 +240,8 @@ pub enum Creator {
     /// Describes the author of a citation when they are an individual.
     Person(String),
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 /// Describes the source of the sequence according to the citation.
@@ -293,27 +307,12 @@ impl FromXml for Vec<Source> {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub enum SourceType {
     Strain,
     Plasmid,
     Transposon,
     Tissue,
-}
-
-impl FromStr for CitationType {
-    type Err = crate::error::InvalidValue;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use self::CitationType::*;
-        match s {
-            "book" => Ok(Book),
-            "journal article" => Ok(JournalArticle),
-            "online journal article" => Ok(OnlineJournalArticle),
-            "patent" => Ok(Patent),
-            "submission" => Ok(Submission),
-            "thesis" => Ok(Thesis),
-            "unpublished observations" => Ok(UnpublishedObservations),
-            other => Err(InvalidValue(String::from(other))),
-        }
-    }
 }

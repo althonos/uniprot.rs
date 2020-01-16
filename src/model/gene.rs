@@ -5,9 +5,11 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::decode_attribute;
 
 #[derive(Debug, Clone, Default)]
 /// Describes a gene.
@@ -34,6 +36,8 @@ impl FromXml for Gene {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 /// Describes different types of gene designations.
 pub struct Name {
@@ -56,6 +60,8 @@ impl Name {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 impl FromXml for Name {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
@@ -67,18 +73,13 @@ impl FromXml for Name {
         let attr = attributes_to_hashmap(event)?;
         let name = reader.read_text(event.local_name(), buffer)?;
         let evidence = get_evidences(reader, &attr)?;
-        let ty = match attr.get(&b"type"[..]).map(|a| &*a.value) {
-            Some(b"primary") => NameType::Primary,
-            Some(b"synonym") => NameType::Synonym,
-            Some(b"ordered locus") => NameType::OrderedLocus,
-            Some(b"ORF") => NameType::Orf,
-            None => return Err(Error::MissingAttribute("type", "name")),
-            Some(other) => return Err(Error::invalid_value("type", "name", String::from_utf8_lossy(other))),
-        };
+        let ty = decode_attribute(event, reader, "type", "name")?;
 
         Ok(Self::new_with_evidence(name, ty, evidence))
     }
 }
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 pub enum NameType {
@@ -86,4 +87,17 @@ pub enum NameType {
     Synonym,
     OrderedLocus,
     Orf
+}
+
+impl FromStr for NameType {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "primary" => Ok(NameType::Primary),
+            "synonym" => Ok(NameType::Synonym),
+            "ordered locus" => Ok(NameType::OrderedLocus),
+            "ORF" => Ok(NameType::Orf),
+            other => Err(InvalidValue::from(other))
+        }
+    }
 }

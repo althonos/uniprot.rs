@@ -5,9 +5,11 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::decode_attribute;
 
 #[derive(Debug, Clone)]
 pub enum FeatureLocation {
@@ -64,6 +66,8 @@ impl FromXml for FeatureLocation {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub struct Position {
     pub pos: Option<usize>,
@@ -84,16 +88,10 @@ impl FromXml for Position {
         );
 
         let attr = attributes_to_hashmap(event)?;
-        let status = match attr.get(&b"status"[..]).map(|a| &*a.value) {
-            Some(b"certain") => Status::Certain,
-            Some(b"uncertain") => Status::Uncertain,
-            Some(b"less than") => Status::Certain,
-            Some(b"greater than") => Status::Certain,
-            Some(b"unknown") => Status::Certain,
-            None => Status::default(),
-            Some(other) => return Err(
-                Error::invalid_value("status", "position", String::from_utf8_lossy(other))
-            ),
+        let status = match decode_attribute(event, reader, "status", "position") {
+            Ok(status) => status,
+            Err(Error::MissingAttribute(_, _)) => Status::default(),
+            Err(other) => return Err(other),
         };
         let evidence = get_evidences(reader, &attr)?;
         let pos = attr.get(&b"position"[..])
@@ -107,6 +105,8 @@ impl FromXml for Position {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub enum Status {
     Certain,
@@ -119,5 +119,19 @@ pub enum Status {
 impl Default for Status {
     fn default() -> Self {
         Status::Certain
+    }
+}
+
+impl FromStr for Status {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "certain" => Ok(Status::Certain),
+            "uncertain" => Ok(Status::Uncertain),
+            "less than" => Ok(Status::LessThan),
+            "greater than" => Ok(Status::GreaterThan),
+            "unknown" => Ok(Status::Unknown),
+            other => Err(InvalidValue::from(other))
+        }
     }
 }

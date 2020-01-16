@@ -73,9 +73,14 @@ impl FromXml for Evidence {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
+/// A reference to the source of the data.
 pub enum Source {
+    /// A cross-reference to another database, such as PubMed.
     DbRef(DbReference),
+    /// An internal reference to a source only cited within the entry.
     Ref(usize)
 }
 

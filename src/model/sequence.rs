@@ -5,8 +5,10 @@ use quick_xml::Reader;
 use quick_xml::events::BytesStart;
 
 use crate::error::Error;
+use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::decode_attribute;
 
 #[derive(Debug, Default, Clone)]
 pub struct Sequence {
@@ -55,13 +57,10 @@ impl FromXml for Sequence {
             .transpose()?
             .map(|x| bool::from_str(&x))
             .transpose()?;
-        let fragment = match attr.get(&b"fragment"[..]).map(|x| &*x.value) {
-            Some(b"single") => Some(FragmentType::Single),
-            Some(b"multiple") => Some(FragmentType::Multiple),
-            None => None,
-            Some(other) => return Err(
-                Error::invalid_value("fragment", "sequence", String::from_utf8_lossy(other))
-            ),
+        let fragment = match decode_attribute(event, reader, "fragment", "sequence") {
+            Ok(fragment) => Some(fragment),
+            Err(Error::MissingAttribute(_, _)) => None,
+            Err(other) => return Err(other),
         };
 
         let value = reader.read_text(b"sequence", buffer)?;
@@ -77,8 +76,21 @@ impl FromXml for Sequence {
     }
 }
 
+// ---------------------------------------------------------------------------
+
 #[derive(Debug, Clone)]
 pub enum FragmentType {
     Single,
     Multiple,
+}
+
+impl FromStr for FragmentType {
+    type Err = InvalidValue;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "single" => Ok(Self::Single),
+            "multiple" => Ok(Self::Multiple),
+            other => Err(InvalidValue::from(other)),
+        }
+    }
 }
