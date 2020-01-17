@@ -34,6 +34,14 @@ use self::worker::Worker;
 #[cfg(feature = "threading")]
 use self::consumer::Consumer;
 
+#[cfg(feature = "threading")]
+/// The number of threads used for parsing.
+///
+/// Note that one extra thread is spawned simply to consume the buffered
+/// reader; the other threads will parse the resulting bytes into proper
+/// entries.
+pub const THREADS: usize = 16;
+
 // ---------------------------------------------------------------------------
 
 macro_rules! parse_inner {
@@ -208,9 +216,9 @@ impl<B: BufRead + Send + 'static> UniprotParser<B> {
         xml.expand_empty_elements(true);
 
         // create the communication channels
-        let (s0, r0) = crossbeam_channel::bounded(16);
-        let (s1, r1) = crossbeam_channel::bounded(16);
-        let (s2, r2) = crossbeam_channel::bounded(16);
+        let (s0, r0) = crossbeam_channel::bounded(THREADS);
+        let (s1, r1) = crossbeam_channel::bounded(THREADS);
+        let (s2, r2) = crossbeam_channel::bounded(THREADS);
 
         // read until we enter the `uniprot` element
         loop {
@@ -235,9 +243,8 @@ impl<B: BufRead + Send + 'static> UniprotParser<B> {
         // create the consumer and the workers
         let mut consumer = Consumer::new(xml.into_underlying_reader(), s1, r0);
         consumer.start();
-
-        let mut workers = Vec::with_capacity(16);
-        for _ in 0..16 {
+        let mut workers = Vec::with_capacity(THREADS);
+        for _ in 0..THREADS {
             let worker = Worker::new(r1.clone(), s2.clone(), s0.clone(), consumer.ateof.clone());
             workers.push(worker);
             s0.send(Vec::new()).unwrap();
