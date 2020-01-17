@@ -1,10 +1,24 @@
 //!
 
+#[cfg(feature = "threading")]
+mod worker;
+#[cfg(feature = "threading")]
+mod consumer;
+
 use std::collections::HashSet;
 use std::io::BufRead;
 use std::str::FromStr;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use bytes::Bytes;
+#[cfg(feature = "threading")]
+use crossbeam_channel::Receiver;
+#[cfg(feature = "threading")]
+use crossbeam_channel::RecvTimeoutError;
 use quick_xml::Reader;
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::BytesEnd;
@@ -14,6 +28,13 @@ use quick_xml::Error as XmlError;
 
 use super::model::*;
 use super::error::Error;
+
+#[cfg(feature = "threading")]
+use self::worker::Worker;
+#[cfg(feature = "threading")]
+use self::consumer::Consumer;
+
+// ---------------------------------------------------------------------------
 
 macro_rules! parse_inner {
     ($event:expr, $reader:expr, $buffer:expr, $($rest:tt)*) => ({
@@ -51,44 +72,6 @@ macro_rules! parse_inner {
                     let e = XmlError::EndEventMismatch { expected, found };
                     return Err(Error::from(e));
                 }
-                _ => continue,
-            }
-        }
-    })
-}
-
-macro_rules! parse_inner_ignoring {
-    ($event:expr, $reader:expr, $buffer:expr, $ignores:expr, $($rest:tt)*) => ({
-        loop {
-            use $crate::quick_xml::events::BytesEnd;
-            use $crate::quick_xml::events::BytesStart;
-            use $crate::quick_xml::events::Event;
-            use $crate::quick_xml::Error as XmlError;
-
-            $buffer.clear();
-            match $reader.read_event($buffer) {
-                Ok(Event::Start(ref x)) => {
-                    if $ignores.contains(x.local_name()) {
-                        $reader.read_to_end(x.local_name(), &mut Vec::new())?;
-                        continue
-                    } else {
-                        parse_inner_impl!(x, x.local_name(), $($rest)*);
-                    }
-
-                    unimplemented!(
-                        "`{}` in `{}`",
-                        String::from_utf8_lossy(x.local_name()),
-                        String::from_utf8_lossy($event.local_name())
-                    );
-                }
-                Err(e) => {
-                    return Err(Error::from(e));
-                }
-                Ok(Event::Eof) => {
-                    let e = String::from_utf8_lossy($event.local_name()).to_string();
-                    return Err(Error::from(XmlError::UnexpectedEof(e)));
-                }
-                Ok(Event::End(_)) => break,
                 _ => continue,
             }
         }
@@ -207,39 +190,115 @@ pub(crate) mod utils {
 
 // ---------------------------------------------------------------------------
 
+#[cfg(feature = "threading")]
+/// A parser for the Uniprot XML format that parses entries iteratively.
+pub struct UniprotParser<B: BufRead + Send + 'static> {
+    consumer: Consumer<B>,
+    workers: Vec<Worker>,
+    receiver: Receiver<Result<Entry, Error>>,
+    finished: bool,
+    started: bool,
+}
+
+#[cfg(feature = "threading")]
+impl<B: BufRead + Send + 'static> UniprotParser<B> {
+    pub fn new(reader: B) -> UniprotParser<B> {
+        let mut buffer = Vec::new();
+        let mut xml = Reader::from_reader(reader);
+        xml.expand_empty_elements(true);
+
+        // create the communication channels
+        let (s0, r0) = crossbeam_channel::bounded(16);
+        let (s1, r1) = crossbeam_channel::bounded(16);
+        let (s2, r2) = crossbeam_channel::bounded(16);
+
+        // read until we enter the `uniprot` element
+        loop {
+            buffer.clear();
+            match xml.read_event(&mut buffer) {
+                Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break,
+                Err(e) => {
+                    s2.send(Err(Error::from(e)))
+                        .expect("channel should still be connected");
+                    break;
+                }
+                Ok(Event::Eof) => {
+                    let e = String::from("xml");
+                    s2.send(Err(Error::from(XmlError::UnexpectedEof(e))))
+                        .expect("channel should still be connected");
+                    break;
+                }
+                _ => (),
+            }
+        };
+
+        // create the consumer and the workers
+        let mut consumer = Consumer::new(xml.into_underlying_reader(), s1, r0);
+        consumer.start();
+
+        let mut workers = Vec::with_capacity(16);
+        for _ in 0..16 {
+            let worker = Worker::new(r1.clone(), s2.clone(), s0.clone(), consumer.ateof.clone());
+            workers.push(worker);
+            s0.send(Vec::new()).unwrap();
+        }
+
+        // return the parser
+        UniprotParser {
+            consumer,
+            workers,
+            finished: false,
+            started: false,
+            receiver: r2,
+        }
+    }
+}
+
+#[cfg(feature = "threading")]
+impl<B: BufRead + Send + 'static> Iterator for UniprotParser<B> {
+    type Item = Result<Entry, Error>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.finished {
+            return None;
+        }
+
+        if !self.started {
+            for worker in &mut self.workers {
+                worker.start();
+            }
+            self.started = true;
+        }
+
+        loop {
+            match self.receiver.recv_timeout(Duration::from_micros(1))  {
+                Ok(item) => return Some(item),
+                Err(RecvTimeoutError::Timeout) => {
+                    if !self.consumer.is_alive() && !self.workers.iter().any(|w| w.is_alive()) {
+                        self.finished = true;
+                        return None;
+                    }
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    self.finished = true;
+                    return Some(Err(Error::ThreadingError("disconnected channel")));
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+#[cfg(not(feature = "threading"))]
 /// A parser for the Uniprot XML format that parses entries iteratively.
 pub struct UniprotParser<B: BufRead> {
     xml: Reader<B>,
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
     finished: bool,
-    ignores: HashSet<Bytes>,
 }
 
-impl<B: BufRead> UniprotParser<B> {
-    /// Make the parser ignore an `entry` element.
-    ///
-    /// This can be useful to speed-up the parser if you are only interested
-    /// in particular elements, and you want the parser to only process these.
-    /// *Note that element names must be given as they appear in the XML,
-    /// like `organismHost` or `reference`, and not like they appear as fields
-    /// of the `Entry` structure.*
-    ///
-    /// # Example
-    /// ```rust
-    /// # let reader = std::fs::File::open("tests/uniprot.xml")
-    /// #     .map(std::io::BufReader::new).unwrap();
-    /// for result in uniprot::parse(reader).ignore("feature") {
-    ///     let entry = result.unwrap();
-    ///     assert_eq!(entry.features.len(), 0);
-    /// }
-    /// ```
-    pub fn ignore<K: Into<Bytes>>(&mut self, key: K) -> &mut Self {
-        self.ignores.insert(key.into());
-        self
-    }
-}
-
+#[cfg(not(feature = "threading"))]
 impl<B: BufRead> UniprotParser<B> {
     pub fn new(reader: B) -> UniprotParser<B> {
         let mut buffer = Vec::new();
@@ -265,11 +324,11 @@ impl<B: BufRead> UniprotParser<B> {
             buffer,
             cache,
             finished: false,
-            ignores: Default::default()
         }
     }
 }
 
+#[cfg(not(feature = "threading"))]
 impl<B: BufRead> Iterator for UniprotParser<B> {
     type Item = Result<Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
@@ -302,11 +361,10 @@ impl<B: BufRead> Iterator for UniprotParser<B> {
                 },
                 // create a new Entry
                 Ok(Event::Start(ref e)) if e.local_name() == b"entry" => {
-                    return Some(Entry::from_xml_ignoring(
+                    return Some(Entry::from_xml(
                         &e.clone().into_owned(),
                         &mut self.xml,
                         &mut self.buffer,
-                        &self.ignores
                     ));
                 },
                 _ => (),

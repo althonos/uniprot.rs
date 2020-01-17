@@ -26,7 +26,11 @@ pub enum Error {
     #[error(display = "duplicate element `{}` in `{}`", 0, 1)]
     DuplicateElement(&'static str, &'static str),
     #[error(display = "invalid value for attribute `{}` in `{}`", 0, 1)]
-    InvalidValue(&'static str, &'static str, #[error(source)] InvalidValue)
+    InvalidValue(&'static str, &'static str, #[error(source)] InvalidValue),
+
+    #[cfg(feature = "threading")]
+    #[error(display = "threading error: {}", 0)]
+    ThreadingError(&'static str)
 }
 
 impl Error {

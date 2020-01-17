@@ -33,6 +33,9 @@ impl FromXml for Protein {
             e @ b"alternativeName" => {
                 protein.name.alternative.push(FromXml::from_xml(&e, reader, buffer)?);
             },
+            e @ b"submittedName" => {
+                protein.name.submitted.push(FromXml::from_xml(&e, reader, buffer)?);
+            },
             e @ b"component" => {
                 // TODO: proper fix to avoid nested `component` in `component`
                 protein.components.push(Self::from_xml(&e, reader, buffer)?.name);

@@ -27,6 +27,9 @@ err-derive = "0.2.1"
 fnv = "1.0.6"
 quick-xml = "0.17.2"
 url = "2.1.1"
+[dependencies.crossbeam-channel]
+version = "*"
+optional = true
 
 [dev-dependencies]
 ftp = "3.0.1"
@@ -35,3 +38,7 @@ libflate = "0.1.27"
 version = "0.10.0"
 features = ["blocking"]
 default-features = false
+
+[features]
+threading = ["crossbeam-channel"]
+default = ["threading"]

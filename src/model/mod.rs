@@ -93,12 +93,13 @@ impl Entry {
             evidences: Default::default(),
         }
     }
+}
 
-    pub(crate) fn from_xml_ignoring<B: BufRead>(
+impl FromXml for Entry {
+    fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>,
-        ignores: &HashSet<Bytes>,
+        buffer: &mut Vec<u8>
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"entry");
 
@@ -111,7 +112,7 @@ impl Entry {
         };
 
         let mut entry = Entry::new(dataset);
-        parse_inner_ignoring!{event, reader, buffer, ignores,
+        parse_inner!{event, reader, buffer,
             b"accession" => {
                 entry.accessions.push(reader.read_text(b"accession", buffer)?);
             },
@@ -160,16 +161,6 @@ impl Entry {
         }
 
         Ok(entry)
-    }
-}
-
-impl FromXml for Entry {
-    fn from_xml<B: BufRead>(
-        event: &BytesStart,
-        reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
-    ) -> Result<Self, Error> {
-        Self::from_xml_ignoring(event, reader, buffer, &Default::default())
     }
 }
 

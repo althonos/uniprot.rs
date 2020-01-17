@@ -19,6 +19,8 @@ extern crate bytes;
 extern crate quick_xml;
 extern crate url;
 extern crate fnv;
+#[cfg(feature = "threading")]
+extern crate crossbeam_channel;
 
 #[macro_use]
 pub mod parser;
@@ -43,7 +45,7 @@ use std::io::BufRead;
 ///
 /// println!("{:#?}", parser.next())
 /// ```
-pub fn parse<B: BufRead>(reader: B) -> UniprotParser<B> {
+pub fn parse<B: BufRead + Send + 'static>(reader: B) -> UniprotParser<B> {
     UniprotParser::new(reader)
 }
 
@@ -52,42 +54,21 @@ mod tests {
 
     use super::*;
 
-    const SPROT: &str = "http://ftp.ebi.ac.uk/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.xml.gz";
-
     #[test]
-    fn parse_swissprot() {
-        // connect to the EBI FTP server via HTTP
-        let gzipped = reqwest::blocking::get(SPROT)
-            .expect("could not connect to EBI FTP server");
-
-        // decode gzip stream
-        let dec = libflate::gzip::Decoder::new(gzipped).unwrap();
-        for x in crate::parse(std::io::BufReader::new(dec)).take(1000) {
-            let entry = x.expect("parsing of entry failed");
-            assert!(!entry.accessions.is_empty());
-            assert!(!entry.names.is_empty());
-        }
+    fn parse_swissprot_200() {
+        let f = std::fs::File::open("tests/uniprot.xml").unwrap();
+        let entries = crate::parse(std::io::BufReader::new(f))
+            .collect::<Result<Vec<_>, _>>()
+            .expect("entries should parse successfully");
+        assert_eq!(entries.len(), 200);
     }
 
     #[test]
-    fn parse_with_ignore() {
-        //
-        let txt = std::fs::read_to_string("tests/uniprot.xml")
-            .unwrap();
-
-        // check parsing normally will get some hosts
-        let entry = crate::parse(std::io::Cursor::new(&txt))
+    fn parse_single_entry() {
+        let f = std::fs::File::open("tests/uniprot.xml").unwrap();
+        crate::parse(std::io::BufReader::new(f))
             .next()
             .expect("an entry should be parsed")
             .expect("the entry should be parsed successfully");
-        assert!(!entry.organism_hosts.is_empty());
-
-        // check parsing with `organismHost` in ignore skips hosts
-        let entry = crate::parse(std::io::Cursor::new(&txt))
-            .ignore("organismHost")
-            .next()
-            .expect("an entry should be parsed")
-            .expect("the entry should be parsed successfully");
-        assert!(entry.organism_hosts.is_empty());
     }
 }
