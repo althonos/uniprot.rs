@@ -164,6 +164,7 @@ pub(crate) mod utils {
 
     pub(crate) fn extract_attribute<'a>(event: &'a BytesStart<'a>, name: &str) -> Result<Option<Attribute<'a>>, Error> {
         event.attributes()
+            .with_checks(false)
             .find(|r| r.is_err() || r.as_ref().ok().map_or(false, |a| a.key == name.as_bytes()))
             .transpose()
             .map_err(Error::from)
