@@ -287,7 +287,7 @@ impl<B: BufRead + Send + 'static> Iterator for UniprotParser<B> {
                 }
                 Err(RecvTimeoutError::Disconnected) => {
                     self.finished = true;
-                    return Some(Err(Error::ThreadingError("disconnected channel")));
+                    return Some(Err(Error::DisconnectedChannel));
                 }
             }
         }

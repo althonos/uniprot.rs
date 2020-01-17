@@ -29,8 +29,8 @@ pub enum Error {
     InvalidValue(&'static str, &'static str, #[error(source)] InvalidValue),
 
     #[cfg(feature = "threading")]
-    #[error(display = "threading error: {}", 0)]
-    ThreadingError(&'static str)
+    #[error(display = "unexpected threading channel disconnection")]
+    DisconnectedChannel,
 }
 
 impl Error {

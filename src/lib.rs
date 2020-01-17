@@ -52,6 +52,8 @@ pub fn parse<B: BufRead + Send + 'static>(reader: B) -> UniprotParser<B> {
 #[cfg(test)]
 mod tests {
 
+    use quick_xml::Error as XmlError;
+    use crate::error::Error;
     use super::*;
 
     #[test]
@@ -70,5 +72,19 @@ mod tests {
             .next()
             .expect("an entry should be parsed")
             .expect("the entry should be parsed successfully");
+    }
+
+    #[test]
+    fn fail_unexpected_eof() {
+        let txt = &b"<entry>"[..];
+        let err = crate::parse(std::io::Cursor::new(txt))
+            .next()
+            .expect("should raise an error")
+            .unwrap_err();
+
+        match err {
+            Error::Xml(XmlError::UnexpectedEof(_)) => (),
+            other => panic!("unexpected error: {:?}", other),
+        }
     }
 }
