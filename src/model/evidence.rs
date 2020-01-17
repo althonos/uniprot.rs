@@ -8,6 +8,7 @@ use crate::error::Error;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::extract_attribute;
+use crate::parser::utils::decode_attribute;
 
 use super::db_reference::DbReference;
 
@@ -40,14 +41,11 @@ impl FromXml for Evidence {
         debug_assert_eq!(event.local_name(), b"evidence");
 
         let attr = attributes_to_hashmap(event)?;
+        let key = decode_attribute(event, reader, "key", "evidence")?;
         let ty = attr.get(&b"type"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .ok_or(Error::MissingAttribute("type", "evidence"))??;
-        let key = attr.get(&b"key"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
-            .transpose()?
-            .ok_or(Error::MissingAttribute("key", "evidence"))
-            .map(|s| usize::from_str(&s))??;
+
 
         let mut evidence = Self::new(key, ty);
         parse_inner!{event, reader, buffer,
@@ -105,10 +103,7 @@ impl FromXml for Source {
         if let Some(db_reference) = optdbref {
             Ok(Source::DbRef(db_reference))
         } else {
-            extract_attribute(event, "ref")?
-                .ok_or(Error::MissingAttribute("ref", "source"))
-                .and_then(|a| a.unescape_and_decode_value(reader).map_err(Error::from))
-                .and_then(|s| usize::from_str(&s).map_err(Error::from))
+            decode_attribute(event, reader, "ref", "source")
                 .map(Source::Ref)
         }
     }

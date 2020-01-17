@@ -9,6 +9,7 @@ use crate::error::InvalidValue;
 use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 
 #[derive(Debug, Default, Clone)]
 pub struct Sequence {
@@ -31,32 +32,20 @@ impl FromXml for Sequence {
         debug_assert_eq!(event.local_name(), b"sequence");
 
         let attr = attributes_to_hashmap(event)?;
-        let length = attr.get(&b"length"[..])
+        let length = decode_attribute(event, reader, "length", "sequence")?;
+        let mass = decode_attribute(event, reader, "mass", "sequence")?;
+        let version = decode_attribute(event, reader, "version", "sequence")?;
+        // let modified = TODO
+        let precursor = extract_attribute(event, "precursor")?
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
-            .map(|x| usize::from_str(&x))
-            .ok_or(Error::MissingAttribute("length", "sequence"))??;
-        let mass = attr.get(&b"mass"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
-            .transpose()?
-            .map(|x| usize::from_str(&x))
-            .ok_or(Error::MissingAttribute("mass", "sequence"))??;
+            .map(|x| bool::from_str(&x))
+            .transpose()?;
         let checksum = attr.get(&b"checksum"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| u64::from_str_radix(&x, 16))
             .ok_or(Error::MissingAttribute("checksum", "sequence"))??;
-        // let modified = TODO
-        let version = attr.get(&b"version"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
-            .transpose()?
-            .map(|x| usize::from_str(&x))
-            .ok_or(Error::MissingAttribute("version", "sequence"))??;
-        let precursor = attr.get(&b"precursor"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
-            .transpose()?
-            .map(|x| bool::from_str(&x))
-            .transpose()?;
         let fragment = match decode_attribute(event, reader, "fragment", "sequence") {
             Ok(fragment) => Some(fragment),
             Err(Error::MissingAttribute(_, _)) => None,
