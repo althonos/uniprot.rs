@@ -24,7 +24,7 @@ use crate::model::Entry;
 use crate::model::Dataset;
 use crate::parser::FromXml;
 
-use super::Status;
+use super::utils::Status;
 
 pub struct Consumer {
     text_receiver: Receiver<Status<Vec<u8>, IoError>>,

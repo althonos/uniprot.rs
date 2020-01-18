@@ -24,7 +24,7 @@ use crate::model::Dataset;
 use crate::parser::FromXml;
 
 use super::THREADS;
-use super::Status;
+use super::utils::Status;
 
 pub struct Producer<B: BufRead + Send + 'static> {
     reader: Option<B>,
