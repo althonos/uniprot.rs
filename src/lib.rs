@@ -36,7 +36,7 @@ use self::parser::XmlRead;
 /// Parse a Uniprot database XML file.
 ///
 /// # Example:
-/// ```rust
+/// ```rust,no_run
 /// let mut client = ftp::FtpStream::connect("ftp.uniprot.org:21").unwrap();
 /// client.login("anonymous", "anonymous").unwrap();
 ///
