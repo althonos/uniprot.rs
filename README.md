@@ -44,8 +44,9 @@ examples, and some details about the different features available.
 
 ## Features
 
-- [`threading`] (_**enabled** by default_): compiles the multithreaded parser
-  that offers a 90% speed increase when processing XML files.
+- [`threading`](https://docs.rs/uniprot/#threading) (_**enabled** by default_): 
+  compiles the multithreaded parser that offers a 90% speed increase when 
+  processing XML files.
 
 ## Changelog
 
