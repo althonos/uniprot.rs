@@ -1,12 +1,16 @@
 sudo: false
 dist: xenial
 language: rust
-rust: stable
 
 cache:
+  cargo: true
   directories:
     - $HOME/.cargo/bin
-    - $TRAVIS_BUILD_DIR/target
+
+rust:
+- stable
+- beta
+- nightly
 
 env:
   global:
