@@ -4,7 +4,7 @@
 //!
 //! [UniprotKB database(s)]: https://www.uniprot.org/
 //!
-//! [![TravisCI](https://img.shields.io/travis/althonos/uniprot.rs/master.svg?maxAge=600&style=flat-square)](https://travis-ci.com/althonos/uniprot.rs/branches)
+//! [![TravisCI](https://img.shields.io/travis/com/althonos/uniprot.rs/master.svg?maxAge=600&style=flat-square)](https://travis-ci.com/althonos/uniprot.rs/branches)
 //! [![Codecov](https://img.shields.io/codecov/c/gh/althonos/uniprot.rs/master.svg?style=flat-square&maxAge=600)](https://codecov.io/gh/althonos/uniprot.rs)
 //! [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square&maxAge=2678400)](https://choosealicense.com/licenses/mit/)
 //! [![Source](https://img.shields.io/badge/source-GitHub-303030.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/uniprot.rs)
