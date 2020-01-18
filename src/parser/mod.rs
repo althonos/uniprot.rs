@@ -60,12 +60,14 @@ use self::consumer::Consumer;
 use self::producer::Producer;
 
 #[cfg(feature = "threading")]
-/// The number of threads used for parsing.
-///
-/// Note that one extra thread is spawned simply to consume the buffered
-/// reader; the other threads will parse the resulting bytes into proper
-/// entries.
-pub const THREADS: usize = 8;
+lazy_static !{
+    /// The number of threads used for parsing.
+    ///
+    /// Note that one extra thread is spawned simply to consume the buffered
+    /// reader; the other threads will parse the resulting bytes into proper
+    /// entries.
+    pub static ref THREADS: usize = num_cpus::get();
+}
 
 // ---------------------------------------------------------------------------
 
@@ -100,9 +102,9 @@ impl<B: BufRead + Send + 'static> ThreadedParser<B> {
         xml.expand_empty_elements(true);
 
         // create the communication channels
-        let (s0, r0) = crossbeam_channel::bounded(THREADS);
-        let (s1, r1) = crossbeam_channel::bounded(THREADS);
-        let (s2, r2) = crossbeam_channel::bounded(THREADS);
+        let (s0, r0) = crossbeam_channel::bounded(*THREADS);
+        let (s1, r1) = crossbeam_channel::bounded(*THREADS);
+        let (s2, r2) = crossbeam_channel::bounded(*THREADS);
 
         // read until we enter the `uniprot` element
         loop {
@@ -126,8 +128,8 @@ impl<B: BufRead + Send + 'static> ThreadedParser<B> {
 
         // create the consumer and the workers
         let producer = Producer::new(xml.into_underlying_reader(), s1, r0);
-        let mut consumers = Vec::with_capacity(THREADS);
-        for _ in 0..THREADS {
+        let mut consumers = Vec::with_capacity(*THREADS);
+        for _ in 0..*THREADS {
             let consumer = Consumer::new(r1.clone(), s2.clone(), s0.clone());
             consumers.push(consumer);
             s0.send(Vec::new()).unwrap();

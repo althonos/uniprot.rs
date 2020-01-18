@@ -69,7 +69,7 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                         // if reached EOF, bail out
                         Ok(0) => {
                             alive.store(false, Ordering::SeqCst);
-                            for _ in 0..THREADS {
+                            for _ in 0..*THREADS {
                                 text_sender.send(Status::Finished).ok();
                             }
                             return;

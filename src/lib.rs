@@ -102,11 +102,14 @@
 #![allow(unused_imports)]
 
 extern crate bytes;
-extern crate quick_xml;
-extern crate url;
-extern crate fnv;
 #[cfg(feature = "threading")]
 extern crate crossbeam_channel;
+extern crate fnv;
+#[macro_use]
+extern crate lazy_static;
+extern crate num_cpus;
+extern crate quick_xml;
+extern crate url;
 
 #[macro_use]
 pub mod parser;
