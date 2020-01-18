@@ -19,6 +19,8 @@ use bytes::Bytes;
 use crossbeam_channel::Receiver;
 #[cfg(feature = "threading")]
 use crossbeam_channel::RecvTimeoutError;
+#[cfg(feature = "threading")]
+use crossbeam_channel::TryRecvError;
 use quick_xml::Reader;
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::BytesEnd;
@@ -40,7 +42,7 @@ use self::producer::Producer;
 /// Note that one extra thread is spawned simply to consume the buffered
 /// reader; the other threads will parse the resulting bytes into proper
 /// entries.
-pub const THREADS: usize = 16;
+pub const THREADS: usize = 8;
 
 // ---------------------------------------------------------------------------
 
@@ -198,11 +200,19 @@ pub(crate) mod utils {
 
 // ---------------------------------------------------------------------------
 
+enum Status<T, E> {
+    Ok(T),
+    Err(E),
+    Finished,
+}
+
+// ---------------------------------------------------------------------------
+
 #[cfg(feature = "threading")]
 /// A parser for the Uniprot XML format that parses entries iteratively.
 pub struct UniprotParser<B: BufRead + Send + 'static> {
-    consumer: Producer<B>,
-    workers: Vec<Consumer>,
+    producer: Producer<B>,
+    consumers: Vec<Consumer>,
     receiver: Receiver<Result<Entry, Error>>,
     finished: bool,
     started: bool,
@@ -241,18 +251,18 @@ impl<B: BufRead + Send + 'static> UniprotParser<B> {
         };
 
         // create the consumer and the workers
-        let consumer = Producer::new(xml.into_underlying_reader(), s1, r0);
-        let mut workers = Vec::with_capacity(THREADS);
+        let producer = Producer::new(xml.into_underlying_reader(), s1, r0);
+        let mut consumers = Vec::with_capacity(THREADS);
         for _ in 0..THREADS {
-            let worker = Consumer::new(r1.clone(), s2.clone(), s0.clone(), consumer.ateof.clone());
-            workers.push(worker);
+            let consumer = Consumer::new(r1.clone(), s2.clone(), s0.clone());
+            consumers.push(consumer);
             s0.send(Vec::new()).unwrap();
         }
 
         // return the parser
         UniprotParser {
-            consumer,
-            workers,
+            producer,
+            consumers,
             finished: false,
             started: false,
             receiver: r2,
@@ -264,28 +274,47 @@ impl<B: BufRead + Send + 'static> UniprotParser<B> {
 impl<B: BufRead + Send + 'static> Iterator for UniprotParser<B> {
     type Item = Result<Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
+        // return None if the parser has already determined that it is
+        // finished processing the input
         if self.finished {
             return None;
         }
 
+        // launch the background threads if this is the first call
+        // to `next` since the struct was created
         if !self.started {
-            self.consumer.start();
-            for worker in &mut self.workers {
-                worker.start();
+            self.producer.start();
+            for consumer in &mut self.consumers {
+                consumer.start();
             }
             self.started = true;
         }
 
+        // poll for parsed entries to return
         loop {
-            match self.receiver.recv_timeout(Duration::from_micros(1))  {
+            // poll every 1µs up to 100µs
+            for _ in 0..100 {
+                match self.receiver.recv_timeout(Duration::from_micros(1)) {
+                    Ok(item) => return Some(item),
+                    Err(RecvTimeoutError::Timeout) => (),
+                    Err(RecvTimeoutError::Disconnected) => {
+                        self.finished = true;
+                        return Some(Err(Error::DisconnectedChannel));
+                    }
+                }
+            }
+
+            // if after 100µs the queue is still empty, check threads are
+            // still running
+            match self.receiver.try_recv()  {
                 Ok(item) => return Some(item),
-                Err(RecvTimeoutError::Timeout) => {
-                    if !self.consumer.is_alive() && self.workers.iter().all(|w| !w.is_alive()) {
+                Err(TryRecvError::Empty) => {
+                    if !self.producer.is_alive() && self.consumers.iter().all(|w| !w.is_alive()) {
                         self.finished = true;
                         return None;
                     }
                 }
-                Err(RecvTimeoutError::Disconnected) => {
+                Err(TryRecvError::Disconnected) => {
                     self.finished = true;
                     return Some(Err(Error::DisconnectedChannel));
                 }

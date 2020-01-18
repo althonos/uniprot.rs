@@ -1,6 +1,7 @@
 //! Ubiquitous types for error management.
 
 use std::error::Error as StdError;
+use std::io::Error as IoError;
 use std::num::ParseIntError;
 use std::str::ParseBoolError;
 
@@ -40,6 +41,12 @@ impl Error {
         value: S
     ) -> Self {
         Error::InvalidValue(name, elem, InvalidValue(value.into()))
+    }
+}
+
+impl From<IoError> for Error {
+    fn from(e: IoError) -> Self {
+        Self::from(XmlError::Io(e))
     }
 }
 

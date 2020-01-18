@@ -6,7 +6,9 @@ use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::thread::JoinHandle;
+use std::thread::Result as ThreadResult;
 use std::time::Duration;
+use std::io::Error as IoError;
 
 use bytes::Bytes;
 use crossbeam_channel::Receiver;
@@ -22,27 +24,26 @@ use crate::model::Entry;
 use crate::model::Dataset;
 use crate::parser::FromXml;
 
+use super::Status;
+
 pub struct Consumer {
-    text_receiver: Receiver<Result<Vec<u8>, XmlError>>,
+    text_receiver: Receiver<Status<Vec<u8>, IoError>>,
     buffer_sender: Sender<Vec<u8>>,
     item_sender: Sender<Result<Entry, Error>>,
-    ateof: Arc<AtomicBool>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
 impl Consumer {
-    pub fn new(
-        text_receiver: Receiver<Result<Vec<u8>, XmlError>>,
+    pub(super) fn new(
+        text_receiver: Receiver<Status<Vec<u8>, IoError>>,
         item_sender: Sender<Result<Entry, Error>>,
         buffer_sender: Sender<Vec<u8>>,
-        ateof: Arc<AtomicBool>,
     ) -> Self {
         Self {
             text_receiver,
             buffer_sender,
             item_sender,
-            ateof,
             handle: None,
             alive: Arc::new(AtomicBool::new(false)),
         }
@@ -55,7 +56,6 @@ impl Consumer {
         let buffer_sender = self.buffer_sender.clone();
         let text_receiver = self.text_receiver.clone();
         let alive = self.alive.clone();
-        let ateof = self.ateof.clone();
 
         self.handle = Some(std::thread::spawn(move || {
             let mut buffer = Vec::new();
@@ -65,16 +65,20 @@ impl Consumer {
                 // get the buffer containing the XML entry
                 let text = loop {
                     match text_receiver.recv_timeout(Duration::from_micros(1)) {
-                        Ok(Ok(text)) => break text,
-                        Ok(Err(e)) => {
+                        Ok(Status::Ok(text)) => break text,
+                        Ok(Status::Finished) => {
+                            alive.store(false, Ordering::SeqCst);
+                            return;
+                        }
+                        Ok(Status::Err(e)) => {
                             item_sender.send(Err(Error::from(e))).ok();
                             alive.store(false, Ordering::SeqCst);
+                            return;
                         }
-                        Err(_) => {
-                            if ateof.load(Ordering::SeqCst) {
-                                alive.store(false, Ordering::SeqCst);
-                                return;
-                            }
+                        Err(RecvTimeoutError::Timeout) => (),
+                        Err(RecvTimeoutError::Disconnected) => {
+                            alive.store(false, Ordering::SeqCst);
+                            return;
                         }
                     }
                 };
