@@ -10,9 +10,17 @@ use url::ParseError as ParseUrlError;
 use quick_xml::Error as XmlError;
 
 #[derive(Debug, Error)]
-/// The main error type for the `uniprot` crate.
+/// The main error type for the [`uniprot`] crate.
+///
+/// [`uniprot`]: ../index.html
 pub enum Error {
     #[error(display = "xml error: {}", 0)]
+    /// The underlying XML parser encountered an error.
+    ///
+    /// *Any error from the underlying reader will be wrapped in the
+    /// [`XmlError::Io`] variant.*
+    ///
+    /// [`XmlError::Io`]: https://docs.rs/quick-xml/latest/quick_xml/enum.Error.html#variant.Io
     Xml(#[error(source)] XmlError),
     #[error(display = "parser error: {}", 0)]
     ParseInt(#[error(source)] ParseIntError),
@@ -28,7 +36,6 @@ pub enum Error {
     DuplicateElement(&'static str, &'static str),
     #[error(display = "invalid value for attribute `{}` in `{}`", 0, 1)]
     InvalidValue(&'static str, &'static str, #[error(source)] InvalidValue),
-
     #[cfg(feature = "threading")]
     #[error(display = "unexpected threading channel disconnection")]
     DisconnectedChannel,
@@ -50,7 +57,9 @@ impl From<IoError> for Error {
     }
 }
 
-/// The main result type for the `uniprot crate`
+/// The main result type for the [`uniprot`] crate.
+///
+/// [`uniprot`]: ../index.html
 pub type Result<T> = std::result::Result<T, Error>;
 
 // ---------------------------------------------------------------------------
