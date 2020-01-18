@@ -12,6 +12,7 @@ use bytes::Bytes;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::Sender;
 use crossbeam_channel::TryRecvError;
+use crossbeam_channel::RecvTimeoutError;
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use quick_xml::Error as XmlError;
@@ -21,69 +22,88 @@ use crate::model::Entry;
 use crate::model::Dataset;
 use crate::parser::FromXml;
 
-pub struct Consumer<B: BufRead + Send + 'static> {
-    reader: Option<B>,
+pub struct Consumer {
+    text_receiver: Receiver<Result<Vec<u8>, XmlError>>,
+    buffer_sender: Sender<Vec<u8>>,
+    item_sender: Sender<Result<Entry, Error>>,
+    ateof: Arc<AtomicBool>,
+    alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
-    pub ateof: Arc<AtomicBool>,
-    pub alive: Arc<AtomicBool>,
-
-    // the queue to send text fully read
-    text_sender: Sender<Result<Vec<u8>, XmlError>>,
-    // the queue to receive recycled buffers
-    buffer_receiver: Receiver<Vec<u8>>,
 }
 
-impl<B: BufRead + Send + 'static> Consumer<B> {
+impl Consumer {
     pub fn new(
-        reader: B,
-        text_sender: Sender<Result<Vec<u8>, XmlError>>,
-        buffer_receiver: Receiver<Vec<u8>>,
+        text_receiver: Receiver<Result<Vec<u8>, XmlError>>,
+        item_sender: Sender<Result<Entry, Error>>,
+        buffer_sender: Sender<Vec<u8>>,
+        ateof: Arc<AtomicBool>,
     ) -> Self {
         Self {
-            reader: Some(reader),
+            text_receiver,
+            buffer_sender,
+            item_sender,
+            ateof,
             handle: None,
-            ateof: Arc::new(AtomicBool::new(false)),
             alive: Arc::new(AtomicBool::new(false)),
-            text_sender: text_sender,
-            buffer_receiver: buffer_receiver,
         }
     }
 
     pub fn start(&mut self) {
         self.alive.store(true, Ordering::SeqCst);
 
-        let ateof = self.ateof.clone();
+        let item_sender = self.item_sender.clone();
+        let buffer_sender = self.buffer_sender.clone();
+        let text_receiver = self.text_receiver.clone();
         let alive = self.alive.clone();
-        let text_sender = self.text_sender.clone();
-        let buffer_receiver = self.buffer_receiver.clone();
-        let mut reader = self.reader.take().unwrap();
+        let ateof = self.ateof.clone();
 
         self.handle = Some(std::thread::spawn(move || {
+            let mut buffer = Vec::new();
             loop {
-                let mut buffer = buffer_receiver.recv().unwrap();
                 buffer.clear();
-                loop {
-                    match reader.read_until(b'>', &mut buffer) {
-                        // if reached EOF, bail out
-                        Ok(0) => {
-                            ateof.store(true, Ordering::SeqCst);
+
+                // get the buffer containing the XML entry
+                let text = loop {
+                    match text_receiver.recv_timeout(Duration::from_micros(1)) {
+                        Ok(Ok(text)) => break text,
+                        Ok(Err(e)) => {
+                            item_sender.send(Err(Error::from(e))).ok();
                             alive.store(false, Ordering::SeqCst);
-                            return;
                         }
-                        // if a full entry is found, send it
-                        Ok(_) if buffer.ends_with(&b"</entry>"[..]) => {
-                            text_sender.send(Ok(buffer)).ok();
-                            break;
+                        Err(_) => {
+                            if ateof.load(Ordering::SeqCst) {
+                                alive.store(false, Ordering::SeqCst);
+                                return;
+                            }
                         }
-                        // if an error is encountered, send it and bail out
-                        Err(e) => {
-                            text_sender.send(Err(XmlError::Io(e))).ok();
-                            ateof.store(true, Ordering::SeqCst);
-                            alive.store(false, Ordering::SeqCst);
-                            return;
-                        }
-                        _ => (),
                     }
+                };
+
+                // parse the XML file and send the result to the main thread
+                let mut xml = Reader::from_reader(Cursor::new(&text));
+                xml.expand_empty_elements(true).trim_text(true);
+                match xml.read_event(&mut buffer) {
+                    Err(e) => {
+                        item_sender.send(Err(Error::from(e))).ok();
+                        return;
+                    }
+                    Ok(Event::Eof) => {
+                        let name = String::from("entry");
+                        let err = Error::from(XmlError::UnexpectedEof(name));
+                        item_sender.send(Err(err)).ok();
+                        return;
+                    }
+                    Ok(Event::Start(s)) if s.local_name() == b"entry" => {
+                        let e = Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
+                        item_sender.send(e).ok();
+                    }
+                    _ => unreachable!("unexpected XML event"),
+                }
+
+                // send the buffer back to the consumer so it can be reused
+                if buffer_sender.send(text).is_err() {
+                    alive.store(false, Ordering::SeqCst);
+                    return;
                 }
             }
         }));
@@ -92,11 +112,4 @@ impl<B: BufRead + Send + 'static> Consumer<B> {
     pub fn is_alive(&self) -> bool {
         self.alive.load(Ordering::SeqCst)
     }
-
-    // pub fn stop(&mut self) {
-    //     self.alive.store(false, Ordering::SeqCst);
-    //     self.handle
-    //         .take().expect("Called stop on non-running thread")
-    //         .join().expect("Could not join spawned thread");
-    // }
 }

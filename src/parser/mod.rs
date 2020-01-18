@@ -1,9 +1,9 @@
 //!
 
 #[cfg(feature = "threading")]
-mod worker;
-#[cfg(feature = "threading")]
 mod consumer;
+#[cfg(feature = "threading")]
+mod producer;
 
 use std::collections::HashSet;
 use std::io::BufRead;
@@ -30,9 +30,9 @@ use super::model::*;
 use super::error::Error;
 
 #[cfg(feature = "threading")]
-use self::worker::Worker;
-#[cfg(feature = "threading")]
 use self::consumer::Consumer;
+#[cfg(feature = "threading")]
+use self::producer::Producer;
 
 #[cfg(feature = "threading")]
 /// The number of threads used for parsing.
@@ -201,8 +201,8 @@ pub(crate) mod utils {
 #[cfg(feature = "threading")]
 /// A parser for the Uniprot XML format that parses entries iteratively.
 pub struct UniprotParser<B: BufRead + Send + 'static> {
-    consumer: Consumer<B>,
-    workers: Vec<Worker>,
+    consumer: Producer<B>,
+    workers: Vec<Consumer>,
     receiver: Receiver<Result<Entry, Error>>,
     finished: bool,
     started: bool,
@@ -241,10 +241,10 @@ impl<B: BufRead + Send + 'static> UniprotParser<B> {
         };
 
         // create the consumer and the workers
-        let consumer = Consumer::new(xml.into_underlying_reader(), s1, r0);
+        let consumer = Producer::new(xml.into_underlying_reader(), s1, r0);
         let mut workers = Vec::with_capacity(THREADS);
         for _ in 0..THREADS {
-            let worker = Worker::new(r1.clone(), s2.clone(), s0.clone(), consumer.ateof.clone());
+            let worker = Consumer::new(r1.clone(), s2.clone(), s0.clone(), consumer.ateof.clone());
             workers.push(worker);
             s0.send(Vec::new()).unwrap();
         }
