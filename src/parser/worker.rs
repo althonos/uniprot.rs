@@ -67,8 +67,8 @@ impl Worker {
                     match text_receiver.recv_timeout(Duration::from_micros(1)) {
                         Ok(Ok(text)) => break text,
                         Ok(Err(e)) => {
-                            alive.store(false, Ordering::SeqCst);
                             item_sender.send(Err(Error::from(e))).ok();
+                            alive.store(false, Ordering::SeqCst);
                         }
                         Err(_) => {
                             if ateof.load(Ordering::SeqCst) {

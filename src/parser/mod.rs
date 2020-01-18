@@ -241,8 +241,7 @@ impl<B: BufRead + Send + 'static> UniprotParser<B> {
         };
 
         // create the consumer and the workers
-        let mut consumer = Consumer::new(xml.into_underlying_reader(), s1, r0);
-        consumer.start();
+        let consumer = Consumer::new(xml.into_underlying_reader(), s1, r0);
         let mut workers = Vec::with_capacity(THREADS);
         for _ in 0..THREADS {
             let worker = Worker::new(r1.clone(), s2.clone(), s0.clone(), consumer.ateof.clone());
@@ -270,6 +269,7 @@ impl<B: BufRead + Send + 'static> Iterator for UniprotParser<B> {
         }
 
         if !self.started {
+            self.consumer.start();
             for worker in &mut self.workers {
                 worker.start();
             }
@@ -280,7 +280,7 @@ impl<B: BufRead + Send + 'static> Iterator for UniprotParser<B> {
             match self.receiver.recv_timeout(Duration::from_micros(1))  {
                 Ok(item) => return Some(item),
                 Err(RecvTimeoutError::Timeout) => {
-                    if !self.consumer.is_alive() && !self.workers.iter().any(|w| w.is_alive()) {
+                    if !self.consumer.is_alive() && self.workers.iter().all(|w| !w.is_alive()) {
                         self.finished = true;
                         return None;
                     }
