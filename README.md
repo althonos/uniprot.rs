@@ -23,7 +23,7 @@ of a UniprotKB database in XML format (either SwissProt or TrEMBL).
 extern crate uniprot;
 
 let f = std::fs::File::open("tests/uniprot.xml")
-   .map(std::io::Buffer::new)
+   .map(std::io::BufReader::new)
    .unwrap();
 
 for r in uniprot::parse(f) {

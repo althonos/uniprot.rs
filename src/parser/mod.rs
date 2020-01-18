@@ -10,7 +10,7 @@
 //! baseline only collect [`quick-xml`] events without deserializing them into
 //! the appropriate owned types from [`::model`]:
 //!
-//! ```
+//! ```text
 //! test bench_baseline          ... bench:  33,280,101 ns/iter (+/- 1,154,274) = 119 MB/s
 //! test bench_sequential_parser ... bench:  53,509,244 ns/iter (+/- 5,700,458) = 74 MB/s
 //! test bench_threaded_parser   ... bench:  27,767,008 ns/iter (+/- 6,527,132) = 143 MB/s
