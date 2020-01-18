@@ -1,4 +1,9 @@
+//! Object model of the UniprotKB XML database.
 //!
+//! The model was derived from the latest [Uniprot XML schema], with some
+//! small changes to make the type hierarchy fit with the Rust conventions.
+//!
+//! [Uniprot XML schema]: https://www.uniprot.org/docs/uniprot.xsd 
 
 pub mod comment;
 pub mod evidence;

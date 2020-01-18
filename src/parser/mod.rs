@@ -1,4 +1,23 @@
+//! UniprotKB XML parser implementation.
 //!
+//! This module provides two parsers, one using multithreading to consume
+//! the input, and another one performing everything in the main thread.
+//! The multithreaded parser is about twice as fast, but does not guarantee
+//! the `Entry` are yielded in the same order as they appear in the source
+//! XML file.
+//!
+//! Some benchmarks results on an i7-8550U CPU running at 1.80GHz, where the
+//! baseline only collect [`quick-xml`] events without deserializing them into
+//! the appropriate owned types from [`::model`]:
+//!
+//! ```
+//! test bench_baseline          ... bench:  33,280,101 ns/iter (+/- 1,154,274) = 119 MB/s
+//! test bench_sequential_parser ... bench:  53,509,244 ns/iter (+/- 5,700,458) = 74 MB/s
+//! test bench_threaded_parser   ... bench:  27,767,008 ns/iter (+/- 6,527,132) = 143 MB/s
+//! ```
+//!
+//! [`::model`]: ../model/index.html
+//! [`quick-xml`]: https://docs.rs/quick-xml
 
 pub(crate) mod utils;
 
@@ -65,7 +84,7 @@ pub(crate) trait FromXml: Sized {
 
 #[cfg(feature = "threading")]
 /// A parser for the Uniprot XML format that parses entries iteratively.
-pub struct MultiThreadedParser<B: BufRead + Send + 'static> {
+pub struct ThreadedParser<B: BufRead + Send + 'static> {
     producer: Producer<B>,
     consumers: Vec<Consumer>,
     receiver: Receiver<Result<Entry, Error>>,
@@ -74,7 +93,7 @@ pub struct MultiThreadedParser<B: BufRead + Send + 'static> {
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead + Send + 'static> MultiThreadedParser<B> {
+impl<B: BufRead + Send + 'static> ThreadedParser<B> {
     pub fn new(reader: B) -> Self {
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
@@ -126,7 +145,7 @@ impl<B: BufRead + Send + 'static> MultiThreadedParser<B> {
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead + Send + 'static> Iterator for MultiThreadedParser<B> {
+impl<B: BufRead + Send + 'static> Iterator for ThreadedParser<B> {
     type Item = Result<Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         // return None if the parser has already determined that it is
@@ -180,9 +199,10 @@ impl<B: BufRead + Send + 'static> Iterator for MultiThreadedParser<B> {
 
 #[cfg(feature = "threading")]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B> = MultiThreadedParser<B>;
+pub type Parser<B> = ThreadedParser<B>;
 
 #[cfg(feature = "threading")]
+/// The trait required for the first argument of `uniprot::parse`.
 pub trait XmlRead: BufRead + Send + 'static {}
 
 #[cfg(feature = "threading")]
@@ -191,14 +211,14 @@ impl<B: BufRead + Send + 'static> XmlRead for B {}
 // ---------------------------------------------------------------------------
 
 /// A parser for the Uniprot XML format that processes everything in the main thread.
-pub struct SingleThreadedParser<B: BufRead> {
+pub struct SequentialParser<B: BufRead> {
     xml: Reader<B>,
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
     finished: bool,
 }
 
-impl<B: BufRead> SingleThreadedParser<B> {
+impl<B: BufRead> SequentialParser<B> {
     pub fn new(reader: B) -> Self {
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
@@ -227,7 +247,7 @@ impl<B: BufRead> SingleThreadedParser<B> {
     }
 }
 
-impl<B: BufRead> Iterator for SingleThreadedParser<B> {
+impl<B: BufRead> Iterator for SequentialParser<B> {
     type Item = Result<Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         // return cached item if any
@@ -273,9 +293,10 @@ impl<B: BufRead> Iterator for SingleThreadedParser<B> {
 
 #[cfg(not(feature = "threading"))]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B> = SingleThreadedParser<B>;
+pub type Parser<B> = SequentialParser<B>;
 
 #[cfg(not(feature = "threading"))]
+/// The trait required for the first argument of `uniprot::parse`.
 pub trait XmlRead: BufRead {}
 
 #[cfg(not(feature = "threading"))]

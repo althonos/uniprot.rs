@@ -68,12 +68,12 @@ mod tests {
 
     mod sequential {
         use super::*;
-        use crate::parser::SingleThreadedParser;
+        use crate::parser::SequentialParser;
 
         #[test]
         fn parse_single_entry() {
             let f = std::fs::File::open("tests/uniprot.xml").unwrap();
-            SingleThreadedParser::new(std::io::BufReader::new(f))
+            SequentialParser::new(std::io::BufReader::new(f))
                 .next()
                 .expect("an entry should be parsed")
                 .expect("the entry should be parsed successfully");
@@ -82,7 +82,7 @@ mod tests {
         #[test]
         fn fail_unexpected_eof() {
             let txt = &b"<entry>"[..];
-            let err = SingleThreadedParser::new(std::io::Cursor::new(txt))
+            let err = SequentialParser::new(std::io::Cursor::new(txt))
                 .next()
                 .expect("should raise an error")
                 .unwrap_err();
@@ -99,12 +99,12 @@ mod tests {
     #[cfg(feature = "threading")]
     mod threaded {
         use super::*;
-        use crate::parser::MultiThreadedParser;
+        use crate::parser::ThreadedParser;
 
         #[test]
         fn parse_single_entry() {
             let f = std::fs::File::open("tests/uniprot.xml").unwrap();
-            MultiThreadedParser::new(std::io::BufReader::new(f))
+            ThreadedParser::new(std::io::BufReader::new(f))
                 .next()
                 .expect("an entry should be parsed")
                 .expect("the entry should be parsed successfully");
@@ -113,7 +113,7 @@ mod tests {
         #[test]
         fn fail_unexpected_eof() {
             let txt = &b"<entry>"[..];
-            let err = MultiThreadedParser::new(std::io::Cursor::new(txt))
+            let err = ThreadedParser::new(std::io::Cursor::new(txt))
                 .next()
                 .expect("should raise an error")
                 .unwrap_err();
