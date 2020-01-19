@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.3.1...HEAD
+
+
+## [v0.3.1] - 2020-01-19
+
+### Changed
+- `lazy_static` and `num_cpus` are only required ot build with `threading` feature.
+- Slightly improved performance of `ThreadedParser`.
+
+[v0.3.1]: https://github.com/althonos/uniprot.rs/compare/v0.3.0...v0.3.1
 
 
 ## [v0.3.0] - 2020-01-19
