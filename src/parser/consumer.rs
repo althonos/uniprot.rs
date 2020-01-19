@@ -26,7 +26,6 @@ use crate::parser::FromXml;
 
 pub struct Consumer {
     r_text: Receiver<Option<Vec<u8>>>,
-    s_buff: Sender<Vec<u8>>,
     s_item: Sender<Result<Entry, Error>>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
@@ -36,11 +35,9 @@ impl Consumer {
     pub(super) fn new(
         r_text: Receiver<Option<Vec<u8>>>,
         s_item: Sender<Result<Entry, Error>>,
-        s_buff: Sender<Vec<u8>>,
     ) -> Self {
         Self {
             r_text,
-            s_buff,
             s_item,
             handle: None,
             alive: Arc::new(AtomicBool::new(false)),
@@ -51,7 +48,6 @@ impl Consumer {
         self.alive.store(true, Ordering::SeqCst);
 
         let s_item = self.s_item.clone();
-        let s_buff = self.s_buff.clone();
         let r_text = self.r_text.clone();
         let alive = self.alive.clone();
 
@@ -93,12 +89,6 @@ impl Consumer {
                         s_item.send(e).ok();
                     }
                     _ => unreachable!("unexpected XML event"),
-                }
-
-                // send the buffer back to the consumer so it can be reused
-                if s_buff.send(text).is_err() {
-                    alive.store(false, Ordering::SeqCst);
-                    return;
                 }
 
                 // clear the event buffer

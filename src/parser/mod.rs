@@ -79,7 +79,6 @@ pub struct ThreadedParser<B: BufRead> {
     threads: usize,
     consumers: Vec<Consumer>,
     r_item:  Receiver<Result<Entry, Error>>,
-    r_buff: Receiver<Vec<u8>>,
     s_text: Sender<Option<Vec<u8>>>,
 }
 
@@ -115,7 +114,6 @@ impl<B: BufRead> ThreadedParser<B> {
         xml.expand_empty_elements(true);
 
         // create the communication channels
-        let (s_buff, r_buff) = crossbeam_channel::bounded(threads);
         let (s_text, r_text) = crossbeam_channel::bounded(threads);
         let (s_item, r_item) = crossbeam_channel::bounded(threads);
 
@@ -142,15 +140,13 @@ impl<B: BufRead> ThreadedParser<B> {
         // create the consumer and the workers
         let mut consumers = Vec::with_capacity(threads);
         for _ in 0..threads {
-            let consumer = Consumer::new(r_text.clone(), s_item.clone(), s_buff.clone());
+            let consumer = Consumer::new(r_text.clone(), s_item.clone());
             consumers.push(consumer);
-            s_buff.send(Vec::new()).unwrap();
         }
 
         // return the parser
         Self {
             r_item,
-            r_buff,
             s_text,
             threads,
             consumers,
@@ -188,7 +184,7 @@ impl<B: BufRead> Iterator for ThreadedParser<B> {
             // depending on the state, do something before polling
             match self.state {
                 State::Started => {
-                    let mut buffer = self.r_buff.recv().unwrap();
+                    let mut buffer = Vec::new();
                     buffer.clear();
                     loop {
                         match self.reader.read_until(b'>', &mut buffer) {
