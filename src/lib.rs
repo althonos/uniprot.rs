@@ -67,15 +67,9 @@
 //!
 //! _**enabled** by default_.
 //!
-//! The `threading` feature compiles the parser module in multi-threaded mode. This
-//! feature greatly improves parsing speed and efficiency, but comes with the two
-//! following drawbacks:
-//!
-//! - the reader passed as argument to [`uniprot::parse`] must now be
-//!   `BufRead + Send + 'static` and not only `BufRead`, as it will be sent to
-//!   a background thread.
-//! - the succesive [`Entry`]  do not have any guarantee about the order they are yielded,
-//!   since some later entries could be yielded after.
+//! The `threading` feature compiles the parser module in multi-threaded mode.
+//! This feature greatly improves parsing speed and efficiency, but removes
+//! any guarantee about the order the entries are yielded in.
 //!
 //!
 //! ## Changelog
@@ -120,7 +114,6 @@ pub mod error;
 pub use self::parser::Parser;
 
 use std::io::BufRead;
-use self::parser::XmlRead;
 
 /// Parse a Uniprot database XML file.
 ///
@@ -135,7 +128,7 @@ use self::parser::XmlRead;
 ///
 /// println!("{:#?}", parser.next())
 /// ```
-pub fn parse<B: XmlRead>(reader: B) -> Parser<B> {
+pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
     Parser::new(reader)
 }
 

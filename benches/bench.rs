@@ -22,7 +22,7 @@ fn bench_read(b: &mut Bencher) {
     txt.push_str("</uniprot>");
 
     b.iter(|| {
-        Cursor::new(txt.clone())
+        Cursor::new(&txt)
             .lines()
             .collect::<Result<Vec<String>, _>>()
             .unwrap();
@@ -40,7 +40,7 @@ fn bench_quickxml(b: &mut Bencher) {
     txt.push_str("</uniprot>");
 
     b.iter(|| {
-        let mut r = quick_xml::Reader:: from_reader(Cursor::new(txt.clone()));
+        let mut r = quick_xml::Reader::from_reader(Cursor::new(&txt));
         let mut events = Vec::new();
         let mut buffer = Vec::new();
 
@@ -71,7 +71,7 @@ fn bench_sequential_parser(b: &mut Bencher) {
     txt.push_str("</uniprot>");
 
     b.iter(|| {
-        for entry in uniprot::parser::SequentialParser::new(Cursor::new(txt.clone())) {
+        for entry in uniprot::parser::SequentialParser::new(Cursor::new(&txt)) {
             entry.unwrap();
         }
     });
@@ -90,7 +90,7 @@ fn bench_threaded_parser(b: &mut Bencher) {
     txt.push_str("</uniprot>");
 
     b.iter(|| {
-        for entry in uniprot::parser::ThreadedParser::new(Cursor::new(txt.clone())) {
+        for entry in uniprot::parser::ThreadedParser::new(Cursor::new(&txt)) {
             entry.unwrap();
         }
     });
