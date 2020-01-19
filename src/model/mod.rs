@@ -125,7 +125,7 @@ impl FromXml for Entry {
                 entry.names.push(reader.read_text(b"name", buffer)?);
             },
             e @ b"protein" => {
-                entry.protein = FromXml::from_xml(&e, reader, buffer)?
+                entry.protein = FromXml::from_xml(&e, reader, buffer)?;
             },
             e @ b"gene" => {
                 entry.genes.push(FromXml::from_xml(&e, reader, buffer)?);

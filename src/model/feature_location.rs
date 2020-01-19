@@ -52,9 +52,9 @@ impl FromXml for FeatureLocation {
 
         if let Some(pos) = optposition {
             if optbegin.is_some() {
-                return Err(Error::DuplicateElement("begin", "location"));
+                Err(Error::DuplicateElement("begin", "location"))
             } else if optend.is_some() {
-                return Err(Error::DuplicateElement("end", "location"));
+                Err(Error::DuplicateElement("end", "location"))
             } else {
                 Ok(FeatureLocation::Position(pos))
             }

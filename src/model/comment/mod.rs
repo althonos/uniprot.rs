@@ -350,7 +350,7 @@ impl FromXml for Comment {
                 let mut cofactors = Vec::new();
                 parse_comment!{event, reader, buffer, comment,
                     e @ b"cofactor" => {
-                        cofactors.push(FromXml::from_xml(&e, reader, buffer)?)
+                        cofactors.push(FromXml::from_xml(&e, reader, buffer)?);
                     }
                 }
                 comment.ty = CommentType::Cofactor(cofactors)

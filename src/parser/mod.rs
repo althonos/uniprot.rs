@@ -135,7 +135,6 @@ impl<B: BufRead> ThreadedParser<B> {
         };
 
         // create the consumer and the workers
-        // let producer = Producer::new(xml.into_underlying_reader(), s1, r0);
         let mut consumers = Vec::with_capacity(*THREADS);
         for _ in 0..*THREADS {
             let consumer = Consumer::new(r_text.clone(), s_item.clone(), s_buff.clone());
@@ -145,13 +144,12 @@ impl<B: BufRead> ThreadedParser<B> {
 
         // return the parser
         Self {
-            // producer,
+            r_item,
+            r_buff,
+            s_text,
             consumers,
             reader: xml.into_underlying_reader(),
             state: State::Idle,
-            r_item: r_item,
-            r_buff: r_buff,
-            s_text: s_text,
         }
     }
 }
