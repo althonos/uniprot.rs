@@ -34,6 +34,7 @@ use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use std::num::NonZeroUsize;
 
 use bytes::Bytes;
 #[cfg(feature = "threading")]
@@ -57,26 +58,6 @@ use super::error::Error;
 #[cfg(feature = "threading")]
 use self::consumer::Consumer;
 
-#[cfg(feature = "threading")]
-lazy_static !{
-    /// The number of threads used for parsing.
-    ///
-    /// Note that one extra thread is spawned simply to consume the buffered
-    /// reader; the other threads will parse the resulting bytes into proper
-    /// entries.
-    pub static ref THREADS: usize = num_cpus::get();
-}
-
-// -----------------------------------------------------------------------
-
-pub(crate) trait FromXml: Sized {
-    fn from_xml<B: BufRead>(
-        event: &BytesStart,
-        reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
-    ) -> Result<Self, Error>;
-}
-
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "threading")]
@@ -91,28 +72,52 @@ enum State {
 }
 
 #[cfg(feature = "threading")]
-/// A parser for the Uniprot XML format that parses entries iteratively.
+/// A parser for the Uniprot XML format that parses entries in parallel.
 pub struct ThreadedParser<B: BufRead> {
-    // producer: Producer<B>,
     reader: B,
+    state: State,
+    threads: usize,
     consumers: Vec<Consumer>,
     r_item:  Receiver<Result<Entry, Error>>,
     r_buff: Receiver<Vec<u8>>,
     s_text: Sender<Option<Vec<u8>>>,
-    state: State,
 }
 
 #[cfg(feature = "threading")]
 impl<B: BufRead> ThreadedParser<B> {
+    /// Create a new `ThreadedParser` using all available CPUs.
+    ///
+    /// This number of threads is extracted at runtime using the
+    /// [`num_cpus::get`] function, which returns the number of *virtual*
+    /// CPUs, that can differ from the number of physical CPUs if the
+    /// processor supports hyperthreading.
+    ///
+    /// [`num_cpus::get`]: https://docs.rs/num_cpus/1.12.0/num_cpus/fn.get.html
     pub fn new(reader: B) -> Self {
+        lazy_static !{ static ref THREADS: usize = num_cpus::get(); }
+        let threads = unsafe { NonZeroUsize::new_unchecked(*THREADS) };
+        Self::with_threads(reader, threads)
+    }
+
+    /// Create a new `ThreadedParser` with the requested number of threads.
+    ///
+    /// This function can be useful to fine tune the number of threads to use,
+    /// or in the case of a program to allow the number of threads to be given
+    /// as an argument (like `make` with the `-j` flag).
+    ///
+    /// Note that at least one thread is always going to be spawned; use the
+    /// [`SequentialParser`](./struct.SequentialParser.html) instead to keep
+    /// everything in the main thread.
+    pub fn with_threads(reader: B, threads: NonZeroUsize) -> Self {
+        let threads = threads.get();
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
         xml.expand_empty_elements(true);
 
         // create the communication channels
-        let (s_buff, r_buff) = crossbeam_channel::bounded(*THREADS);
-        let (s_text, r_text) = crossbeam_channel::bounded(*THREADS);
-        let (s_item, r_item) = crossbeam_channel::bounded(*THREADS);
+        let (s_buff, r_buff) = crossbeam_channel::bounded(threads);
+        let (s_text, r_text) = crossbeam_channel::bounded(threads);
+        let (s_item, r_item) = crossbeam_channel::bounded(threads);
 
         // read until we enter the `uniprot` element
         loop {
@@ -135,8 +140,8 @@ impl<B: BufRead> ThreadedParser<B> {
         };
 
         // create the consumer and the workers
-        let mut consumers = Vec::with_capacity(*THREADS);
-        for _ in 0..*THREADS {
+        let mut consumers = Vec::with_capacity(threads);
+        for _ in 0..threads {
             let consumer = Consumer::new(r_text.clone(), s_item.clone(), s_buff.clone());
             consumers.push(consumer);
             s_buff.send(Vec::new()).unwrap();
@@ -147,6 +152,7 @@ impl<B: BufRead> ThreadedParser<B> {
             r_item,
             r_buff,
             s_text,
+            threads,
             consumers,
             reader: xml.into_underlying_reader(),
             state: State::Idle,
@@ -188,7 +194,7 @@ impl<B: BufRead> Iterator for ThreadedParser<B> {
                         match self.reader.read_until(b'>', &mut buffer) {
                             // if reached EOF, bail out
                             Ok(0) => {
-                                for _ in 0..*THREADS {
+                                for _ in 0..self.threads {
                                     self.s_text.send(None).ok();
                                 }
                                 self.state = State::AtEof;
@@ -237,7 +243,7 @@ pub type Parser<B> = ThreadedParser<B>;
 
 // --------------------------------------------------------------------------
 
-/// A parser for the Uniprot XML format that processes everything in the main thread.
+/// A parser for the Uniprot XML format that  parses entries sequentially.
 pub struct SequentialParser<B: BufRead> {
     xml: Reader<B>,
     buffer: Vec<u8>,
@@ -323,3 +329,11 @@ impl<B: BufRead> Iterator for SequentialParser<B> {
 pub type Parser<B> = SequentialParser<B>;
 
 // ---------------------------------------------------------------------------
+
+pub(crate) trait FromXml: Sized {
+    fn from_xml<B: BufRead>(
+        event: &BytesStart,
+        reader: &mut Reader<B>,
+        buffer: &mut Vec<u8>
+    ) -> Result<Self, Error>;
+}
