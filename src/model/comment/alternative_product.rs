@@ -100,7 +100,7 @@ impl FromXml for Isoform {
             },
             e @ b"sequence" => {
                 let seq = FromXml::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optseq.replace(seq) {
+                if optseq.replace(seq).is_some() {
                     return Err(Error::DuplicateElement("sequence", "isoform"));
                 }
             }

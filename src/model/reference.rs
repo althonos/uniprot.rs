@@ -53,7 +53,7 @@ impl FromXml for Reference {
             },
             e @ b"citation" => {
                 let citation = FromXml::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optcit.replace(citation) {
+                if optcit.replace(citation).is_some() {
                     return Err(Error::DuplicateElement("citation", "reference"));
                 }
             },

@@ -94,7 +94,7 @@ impl FromXml for Source {
         parse_inner!{event, reader, buffer,
             e @ b"dbReference" => {
                 let db_reference = FromXml::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optdbref.replace(db_reference) {
+                if optdbref.replace(db_reference).is_some() {
                     return Err(Error::DuplicateElement("dbReference", "source"));
                 }
             }

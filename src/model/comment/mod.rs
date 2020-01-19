@@ -211,7 +211,7 @@ impl FromXml for Comment {
                 parse_comment!{event, reader, buffer, comment,
                     e @ b"conflict" => {
                         let conflict = FromXml::from_xml(&e, reader, buffer)?;
-                        if let Some(_) = optconflict.replace(conflict) {
+                        if optconflict.replace(conflict).is_some() {
                             return Err(Error::DuplicateElement("conflict", "comment"));
                         }
                     }
@@ -246,7 +246,7 @@ impl FromXml for Comment {
                 parse_comment!{event, reader, buffer, comment,
                     e @ b"disease" => {
                         let disease = FromXml::from_xml(&e, reader, buffer)?;
-                        if let Some(_) = optdisease.replace(disease) {
+                        if optdisease.replace(disease).is_some() {
                             return Err(Error::DuplicateElement("disease", "comment"));
                         }
                     }
@@ -259,13 +259,13 @@ impl FromXml for Comment {
                 parse_comment!{event, reader, buffer, comment,
                     e @ b"absorption" => {
                         let absorption = FromXml::from_xml(&e, reader, buffer)?;
-                        if let Some(_) = bcp.absorption.replace(absorption) {
+                        if bcp.absorption.replace(absorption).is_some() {
                             return Err(Error::DuplicateElement("absorption", "comment"));
                         }
                     },
                     e @ b"kinetics" => {
                         let kinetics = FromXml::from_xml(&e, reader, buffer)?;
-                        if let Some(_) = bcp.kinetics.replace(kinetics) {
+                        if bcp.kinetics.replace(kinetics).is_some() {
                             return Err(Error::DuplicateElement("kinetics", "comment"));
                         }
                     },
@@ -304,7 +304,7 @@ impl FromXml for Comment {
                 parse_comment!{event, reader, buffer, comment,
                     e @ b"reaction" => {
                         let reaction = FromXml::from_xml(&e, reader, buffer)?;
-                        if let Some(_) = optreact.replace(reaction) {
+                        if optreact.replace(reaction).is_some() {
                             return Err(Error::DuplicateElement("reaction", "comment"));
                         }
                     },

@@ -41,25 +41,25 @@ impl FromXml for Disease {
         parse_inner!{event, reader, buffer,
             b"name" => {
                 let name = reader.read_text(b"name", buffer)?;
-                if let Some(_) = optname.replace(name) {
+                if optname.replace(name).is_some() {
                     return Err(Error::DuplicateElement("name", "disease"));
                 }
             },
             b"acronym" => {
                 let acronym = reader.read_text(b"acronym", buffer)?;
-                if let Some(_) = optacro.replace(acronym) {
+                if optacro.replace(acronym).is_some() {
                     return Err(Error::DuplicateElement("acronym", "disease"));
                 }
             },
             b"description" => {
                 let description = reader.read_text(b"description", buffer)?;
-                if let Some(_) = optdesc.replace(description) {
+                if optdesc.replace(description).is_some() {
                     return Err(Error::DuplicateElement("description", "disease"));
                 }
             },
             e @ b"dbReference" => {
                 let db_reference = FromXml::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optdbref.replace(db_reference) {
+                if optdbref.replace(db_reference).is_some() {
                     return Err(Error::DuplicateElement("dbReference", "disease"));
                 }
             }

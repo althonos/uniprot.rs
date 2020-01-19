@@ -49,7 +49,7 @@ impl FromXml for Conflict {
         parse_inner!{event, reader, buffer,
             e @ b"sequence" => {
                 let sequence = FromXml::from_xml(&e, reader, buffer)?;
-                if let Some(_) = conflict.sequence.replace(sequence) {
+                if conflict.sequence.replace(sequence).is_some() {
                     return Err(Error::DuplicateElement("sequence", "conflict"));
                 }
             }

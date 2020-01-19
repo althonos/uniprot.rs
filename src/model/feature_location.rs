@@ -32,19 +32,19 @@ impl FromXml for FeatureLocation {
         parse_inner!{event, reader, buffer,
             e @ b"begin" => {
                 let pos = Position::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optbegin.replace(pos) {
+                if optbegin.replace(pos).is_some() {
                     return Err(Error::DuplicateElement("begin", "location"));
                 }
             },
             e @ b"end" => {
                 let pos = Position::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optend.replace(pos) {
+                if optend.replace(pos).is_some() {
                     return Err(Error::DuplicateElement("end", "location"));
                 }
             },
             e @ b"position" => {
                 let pos = Position::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optposition.replace(pos) {
+                if optposition.replace(pos).is_some() {
                     return Err(Error::DuplicateElement("position", "location"));
                 }
             }

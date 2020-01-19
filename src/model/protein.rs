@@ -46,13 +46,13 @@ impl FromXml for Protein {
             },
             b"allergenName" => {
                 let value = reader.read_text(b"allergenName", buffer)?;
-                if let Some(_) = protein.name.allergen.replace(value) {
+                if protein.name.allergen.replace(value).is_some() {
                     return Err(Error::DuplicateElement("allergen", "protein"));
                 }
             },
             b"biotechName" => {
                 let value = reader.read_text(b"biotechName", buffer)?;
-                if let Some(_) = protein.name.biotech.replace(value) {
+                if protein.name.biotech.replace(value).is_some() {
                     return Err(Error::DuplicateElement("biotech", "protein"));
                 }
             },

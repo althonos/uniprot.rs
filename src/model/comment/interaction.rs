@@ -49,13 +49,13 @@ impl FromXml for Interactant {
         parse_inner!{event, reader, buffer,
             b"id" => {
                 let id = reader.read_text(b"id", buffer)?;
-                if let Some(_) = interactant.id.replace(id) {
+                if interactant.id.replace(id).is_some() {
                     return Err(Error::DuplicateElement("id", "interaction"));
                 }
             },
             b"label" => {
                 let label = reader.read_text(b"label", buffer)?;
-                if let Some(_) = interactant.label.replace(label) {
+                if interactant.label.replace(label).is_some() {
                     return Err(Error::DuplicateElement("label", "interaction"));
                 }
             }

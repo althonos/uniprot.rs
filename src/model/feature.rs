@@ -63,7 +63,7 @@ impl FromXml for Feature {
         parse_inner!{event, reader, buffer,
             e @ b"location" => {
                 let loc = FeatureLocation::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optloc.replace(loc) {
+                if optloc.replace(loc).is_some() {
                     return Err(Error::DuplicateElement("location", "feature"));
                 }
             },

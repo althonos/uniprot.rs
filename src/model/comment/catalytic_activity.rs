@@ -62,7 +62,7 @@ impl FromXml for Reaction {
         parse_inner!{event, reader, buffer,
             b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
-                if let Some(_) = opttext.replace(text) {
+                if opttext.replace(text).is_some() {
                     return Err(Error::DuplicateElement("text", "reaction"));
                 }
             },
@@ -113,7 +113,7 @@ impl FromXml for PhysiologicalReaction {
         parse_inner!{event, reader, buffer,
             e @ b"dbReference" => {
                 let dbref = FromXml::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optdbref.replace(dbref) {
+                if optdbref.replace(dbref).is_some() {
                     return Err(Error::DuplicateElement("dbReference", "reaction"));
                 }
             }

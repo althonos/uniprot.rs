@@ -38,19 +38,19 @@ impl FromXml for Absorption {
         parse_inner!{event, reader, buffer,
             b"max" => {
                 let max = reader.read_text(b"max", buffer)?;
-                if let Some(_) = absorption.max.replace(max) {
+                if absorption.max.replace(max).is_some() {
                     return Err(Error::DuplicateElement("max", "absorption"));
                 }
             },
             b"min" => {
                 let min = reader.read_text(b"min", buffer)?;
-                if let Some(_) = absorption.min.replace(min) {
+                if absorption.min.replace(min).is_some() {
                     return Err(Error::DuplicateElement("min", "absorption"));
                 }
             },
             b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
-                if let Some(_) = absorption.text.replace(text) {
+                if absorption.text.replace(text).is_some() {
                     return Err(Error::DuplicateElement("text", "absorption"));
                 }
             }
@@ -87,7 +87,7 @@ impl FromXml for Kinetics {
             },
             b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
-                if let Some(_) = kinetics.text.replace(text) {
+                if kinetics.text.replace(text).is_some() {
                     return Err(Error::DuplicateElement("text", "kinetics"));
                 }
             }

@@ -33,13 +33,13 @@ impl FromXml for Cofactor {
         parse_inner!{event, reader, buffer,
             b"name" => {
                 let name = reader.read_text(b"name", buffer)?;
-                if let Some(_) = optname.replace(name) {
+                if optname.replace(name).is_some() {
                     return Err(Error::DuplicateElement("name", "cofactor"));
                 }
             },
             e @ b"dbReference" => {
                 let dbref = FromXml::from_xml(&e, reader, buffer)?;
-                if let Some(_) = optdbref.replace(dbref) {
+                if optdbref.replace(dbref).is_some() {
                     return Err(Error::DuplicateElement("dbReference", "cofactor"));
                 }
             }
