@@ -14,7 +14,7 @@
 [![GitHub issues](https://img.shields.io/github/issues/althonos/uniprot.rs.svg?style=flat-square&maxAge=600)](https://github.com/althonos/uniprot.rs/issues)
 
 
-## Usage
+## 🔌 Usage
 
 The `uniprot::parse` function can be used to obtain an iterator over the entries
 of a UniprotKB database in XML format (either SwissProt or TrEMBL).
@@ -42,14 +42,21 @@ See the online documentation at [`docs.rs`](https://docs.rs/uniprot) for more
 examples, and some details about the different features available.
 
 
-## Features
+## 📝 Features
 
-- [`threading`](https://docs.rs/uniprot/#threading) (_**enabled** by default_): 
-  compiles the multithreaded parser that offers a 90% speed increase when 
+- [`threading`](https://docs.rs/uniprot/#threading) (_**enabled** by default_):
+  compiles the multithreaded parser that offers a 90% speed increase when
   processing XML files.
 
-## Changelog
+
+## 📋 Changelog
 
 This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 and provides a [changelog](https://github.com/althonos/uniprot.rs/blob/master/CHANGELOG.md)
 in the [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) format.
+
+
+## 📜 License
+
+This library is provided under the open-source
+[MIT license](https://choosealicense.com/licenses/mit/).

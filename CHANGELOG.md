@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.3.0...HEAD
+
+
+## [v0.3.0] - 2020-01-19
+
+### Added
+- `ThreaderParser::with_threads` constructor to control the number of threads
+  to spawn when parsing
+### Changed
+- `ThreadedParser` does not required the reader to be `Send + 'static` anymore.
+
+[v0.2.0]: https://github.com/althonos/uniprot.rs/compare/v0.2.0...v0.3.0
+[`ThreadedParser::with_threads`]: https://docs.rs/uniprot/latest/uniprot/parser/struct.ThreadedParser.html#methods
 
 
 ## [v0.2.0] - 2020-01-18

@@ -14,7 +14,7 @@
 //! [![GitHub issues](https://img.shields.io/github/issues/althonos/uniprot.rs.svg?style=flat-square&maxAge=600)](https://github.com/althonos/uniprot.rs/issues)
 //!
 //!
-//! # Usage
+//! # 🔌 Usage
 //!
 //! The `uniprot::parse` function can be used to obtain an iterator over the entries
 //! of a UniprotKB database in XML format (either SwissProt or TrEMBL). It
@@ -38,7 +38,7 @@
 //! if compiling with the [`threading`] feature, it will require the input to
 //! be [`Send`] and `'static` as well.
 //!
-//! ## Decoding Gzip
+//! ## 📦 Decoding Gzip
 //!
 //! If parsing a Gzipped file, you can use [`flate2::read::GzDecoder`] or
 //! [`libflate::gzip::Decoder`] to decode the input stream, and then simply
@@ -46,7 +46,7 @@
 //! performance, but binds to C,, while [`libflate`] is a pure Rust
 //! implementation.
 //!
-//! ## Downloading from FTP
+//! ## 📧 Downloading from FTP
 //!
 //! Uniprot is available from the two following locations: [`ftp.ebi.ac.uk`]
 //! and [`ftp.uniprot.org`], the former being located in Europe while the
@@ -54,14 +54,14 @@
 //! a connection and parse the databases on-the-fly: see the
 //! [`uniprot::parse`] example to see a code snippet.
 //!
-//! ## Downloading from HTTP
+//! ## 📧 Downloading from HTTP
 //!
 //! If FTP is not available, note that the EBI FTP server can also be reached
 //! using HTTP at [`http://ftp.ebi.ac.uk`]. This allows using HTTP libraries
 //! instead of FTP ones to reach the release files.
 //!
 //!
-//! # Features
+//! # 📝 Features
 //!
 //! ## `threading`
 //!
@@ -72,11 +72,17 @@
 //! any guarantee about the order the entries are yielded in.
 //!
 //!
-//! ## Changelog
+//! ## 📋 Changelog
 //!
 //! This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html)
 //! and provides a [changelog](https://github.com/althonos/uniprot.rs/blob/master/CHANGELOG.md)
 //! in the [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) format.
+//!
+//! ## 📜 License
+//!
+//! This library is provided under the open-source
+//! [MIT license](https://choosealicense.com/licenses/mit/).
+//!
 //!
 //! [`http://ftp.ebi.ac.uk`]: http://ftp.ebi.ac.uk
 //! [`ftp.ebi.ac.uk`]: ftp://ftp.ebi.ac.uk
