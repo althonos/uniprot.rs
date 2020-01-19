@@ -106,7 +106,9 @@ extern crate bytes;
 extern crate crossbeam_channel;
 extern crate fnv;
 #[macro_use]
+#[cfg(feature = "threading")]
 extern crate lazy_static;
+#[cfg(feature = "threading")]
 extern crate num_cpus;
 extern crate quick_xml;
 extern crate url;
