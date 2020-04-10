@@ -1,11 +1,9 @@
-sudo: false
-dist: xenial
+dist: bionic
 language: rust
 
 cache:
-  cargo: true
   directories:
-    - $HOME/.cargo/bin
+    - $TRAVIS_BUILD_DIR/target
 
 rust:
 - stable
