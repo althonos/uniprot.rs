@@ -111,6 +111,7 @@ extern crate lazy_static;
 #[cfg(feature = "threading")]
 extern crate num_cpus;
 extern crate quick_xml;
+extern crate thiserror;
 extern crate url;
 
 #[macro_use]

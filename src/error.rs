@@ -5,7 +5,7 @@ use std::io::Error as IoError;
 use std::num::ParseIntError;
 use std::str::ParseBoolError;
 
-use err_derive::Error;
+use thiserror::Error;
 use url::ParseError as ParseUrlError;
 use quick_xml::Error as XmlError;
 
@@ -14,30 +14,30 @@ use quick_xml::Error as XmlError;
 ///
 /// [`uniprot`]: ../index.html
 pub enum Error {
-    #[error(display = "xml error: {}", 0)]
+    #[error(transparent)]
     /// The underlying XML parser encountered an error.
     ///
     /// *Any error from the underlying reader will be wrapped in the
     /// [`XmlError::Io`] variant.*
     ///
     /// [`XmlError::Io`]: https://docs.rs/quick-xml/latest/quick_xml/enum.Error.html#variant.Io
-    Xml(#[error(source)] XmlError),
-    #[error(display = "parser error: {}", 0)]
-    ParseInt(#[error(source)] ParseIntError),
-    #[error(display = "parser error: {}", 0)]
-    ParseBool(#[error(source)] ParseBoolError),
-    #[error(display = "parser error: {}", 0)]
-    ParseUrl(#[error(source)] ParseUrlError),
-    #[error(display = "missing element `{}` in `{}`", 0, 1)]
+    Xml(#[from] XmlError),
+    #[error("parser error: {0}")]
+    ParseInt(#[from] ParseIntError),
+    #[error("parser error: {0}")]
+    ParseBool(#[from] ParseBoolError),
+    #[error("parser error: {0}")]
+    ParseUrl(#[from] ParseUrlError),
+    #[error("missing element `{0}` in `{1}`")]
     MissingElement(&'static str, &'static str),
-    #[error(display = "missing attribute `{}` in `{}`", 0, 1)]
+    #[error("missing attribute `{0}` in `{1}`")]
     MissingAttribute(&'static str, &'static str),
-    #[error(display = "duplicate element `{}` in `{}`", 0, 1)]
+    #[error("duplicate element `{0}` in `{1}`")]
     DuplicateElement(&'static str, &'static str),
-    #[error(display = "invalid value for attribute `{}` in `{}`", 0, 1)]
-    InvalidValue(&'static str, &'static str, #[error(source)] InvalidValue),
+    #[error("invalid value for attribute `{0}` in `{1}`")]
+    InvalidValue(&'static str, &'static str, #[source] InvalidValue),
     #[cfg(feature = "threading")]
-    #[error(display = "unexpected threading channel disconnection")]
+    #[error("unexpected threading channel disconnection")]
     DisconnectedChannel,
 }
 
@@ -65,7 +65,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 // ---------------------------------------------------------------------------
 
 #[derive(Default, Debug, Clone, Error, PartialEq, Eq)]
-#[error(display = "invalid value: {}", 0)]
+#[error("invalid value: {0}")]
 /// The error type for types with constrained values.
 pub struct InvalidValue(pub String);
 
