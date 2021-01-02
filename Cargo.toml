@@ -22,7 +22,7 @@ repository = "althonos/uniprot.rs"
 status     = "as-is"
 
 [dependencies]
-bytes = "0.6.0"
+bytes = "1.0.0"
 fnv = "1.0.6"
 quick-xml = "0.20.0"
 thiserror = "1.0"
