@@ -24,7 +24,7 @@ status     = "as-is"
 [dependencies]
 bytes = "1.0.0"
 fnv = "1.0.6"
-quick-xml = "0.20.0"
+quick-xml = "0.22.0"
 thiserror = "1.0"
 url = "2.1.1"
 [dependencies.lazy_static]
