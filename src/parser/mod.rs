@@ -53,7 +53,6 @@ use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
 use super::error::Error;
-use super::model::*;
 
 #[cfg(feature = "threading")]
 use self::consumer::Consumer;
@@ -73,17 +72,17 @@ enum State {
 
 #[cfg(feature = "threading")]
 /// A parser for the Uniprot XML format that parses entries in parallel.
-pub struct ThreadedParser<B: BufRead> {
+pub struct ThreadedParser<B: BufRead, E: FromXml> {
     reader: B,
     state: State,
     threads: usize,
     consumers: Vec<Consumer>,
-    r_item: Receiver<Result<Entry, Error>>,
+    r_item: Receiver<Result<E, Error>>,
     s_text: Sender<Option<Vec<u8>>>,
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead> ThreadedParser<B> {
+impl<B: BufRead, E: FromXml> ThreadedParser<B, E> {
     /// Create a new `ThreadedParser` using all available CPUs.
     ///
     /// This number of threads is extracted at runtime using the
@@ -239,19 +238,19 @@ impl<B: BufRead> Iterator for ThreadedParser<B> {
 
 #[cfg(feature = "threading")]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B> = ThreadedParser<B>;
+pub type Parser<B, E> = ThreadedParser<B, E>;
 
 // --------------------------------------------------------------------------
 
 /// A parser for the Uniprot XML format that  parses entries sequentially.
-pub struct SequentialParser<B: BufRead> {
+pub struct SequentialParser<B: BufRead, E: FromXml> {
     xml: Reader<B>,
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
     finished: bool,
 }
 
-impl<B: BufRead> SequentialParser<B> {
+impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
     pub fn new(reader: B) -> Self {
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
@@ -280,8 +279,8 @@ impl<B: BufRead> SequentialParser<B> {
     }
 }
 
-impl<B: BufRead> Iterator for SequentialParser<B> {
-    type Item = Result<Entry, Error>;
+impl<B: BufRead, E: FromXml> Iterator for SequentialParser<B, E> {
+    type Item = Result<E, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         // return cached item if any
         if let Some(item) = self.cache.take() {
@@ -312,7 +311,7 @@ impl<B: BufRead> Iterator for SequentialParser<B> {
                 }
                 // create a new Entry
                 Ok(Event::Start(ref e)) if e.local_name() == b"entry" => {
-                    return Some(Entry::from_xml(
+                    return Some(E::from_xml(
                         &e.clone().into_owned(),
                         &mut self.xml,
                         &mut self.buffer,
@@ -326,11 +325,11 @@ impl<B: BufRead> Iterator for SequentialParser<B> {
 
 #[cfg(not(feature = "threading"))]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B> = SequentialParser<B>;
+pub type Parser<B, E> = SequentialParser<B, E>;
 
 // ---------------------------------------------------------------------------
 
-pub(crate) trait FromXml: Sized {
+pub trait FromXml: Sized {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
