@@ -23,36 +23,35 @@ mod property;
 
 pub use self::db_reference::DbReference;
 pub use self::keyword::Keyword;
-pub use self::property::Property;
 pub use self::molecule::Molecule;
+pub use self::property::Property;
 
 use std::collections::HashSet;
 use std::io::BufRead;
 use std::str::FromStr;
 
 use bytes::Bytes;
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::FromXml;
 
 use self::comment::Comment;
 use self::evidence::Evidence;
-use self::sequence::Sequence;
 use self::feature::Feature;
 use self::gene::Gene;
 use self::gene_location::GeneLocation;
 use self::organism::Organism;
-use self::reference::Reference;
 use self::protein::Protein;
 use self::protein::ProteinExistence;
+use self::reference::Reference;
+use self::sequence::Sequence;
 
 #[derive(Debug, Clone)]
 /// A UniProtKB entry.
 pub struct Entry {
-
     // attributes
     pub dataset: Dataset,
     // created: NaiveDate,
@@ -60,15 +59,15 @@ pub struct Entry {
     // version: usize,
 
     // fields
-    pub accessions: Vec<String>,  // minOccurs = 1
-    pub names: Vec<String>,       // minOccurs = 1
+    pub accessions: Vec<String>, // minOccurs = 1
+    pub names: Vec<String>,      // minOccurs = 1
     pub protein: Protein,
     pub genes: Vec<Gene>,
     pub organism: Organism,
     pub organism_hosts: Vec<Organism>,
     pub gene_location: Vec<GeneLocation>,
-    pub references: Vec<Reference>,  // minOccurs = 1
-    pub comments: Vec<Comment>,      // nillable
+    pub references: Vec<Reference>, // minOccurs = 1
+    pub comments: Vec<Comment>,     // nillable
     pub db_references: Vec<DbReference>,
     pub protein_existence: ProteinExistence,
     pub keywords: Vec<Keyword>,
@@ -104,7 +103,7 @@ impl FromXml for Entry {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"entry");
 
@@ -113,11 +112,17 @@ impl FromXml for Entry {
             Some(b"Swiss-Prot") => Dataset::SwissProt,
             Some(b"TrEMBL") => Dataset::TrEmbl,
             None => return Err(Error::MissingAttribute("dataset", "entry")),
-            Some(other) => return Err(Error::invalid_value("dataset", "entry", String::from_utf8_lossy(other)))
+            Some(other) => {
+                return Err(Error::invalid_value(
+                    "dataset",
+                    "entry",
+                    String::from_utf8_lossy(other),
+                ))
+            }
         };
 
         let mut entry = Entry::new(dataset);
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"accession" => {
                 entry.accessions.push(reader.read_text(b"accession", buffer)?);
             },

@@ -1,15 +1,15 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::get_evidences;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 #[derive(Debug, Clone, Default)]
 /// Describes a gene.
@@ -21,12 +21,12 @@ impl FromXml for Gene {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"gene");
 
         let mut gene = Gene::default();
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"name" => {
                 gene.names.push(FromXml::from_xml(&e, reader, buffer)?);
             }
@@ -55,7 +55,7 @@ impl Name {
         Self {
             value,
             ty,
-            evidence
+            evidence,
         }
     }
 }
@@ -66,7 +66,7 @@ impl FromXml for Name {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"name");
 
@@ -86,7 +86,7 @@ pub enum NameType {
     Primary,
     Synonym,
     OrderedLocus,
-    Orf
+    Orf,
 }
 
 impl FromStr for NameType {
@@ -97,7 +97,7 @@ impl FromStr for NameType {
             "synonym" => Ok(NameType::Synonym),
             "ordered locus" => Ok(NameType::OrderedLocus),
             "ORF" => Ok(NameType::Orf),
-            other => Err(InvalidValue::from(other))
+            other => Err(InvalidValue::from(other)),
         }
     }
 }

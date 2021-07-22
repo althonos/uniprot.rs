@@ -1,21 +1,21 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
+use crate::parser::FromXml;
 
 #[derive(Debug, Clone)]
 pub struct Conflict {
     pub ty: ConflictType,
     pub reference: Option<String>,
-    pub sequence: Option<ConflictSequence>
+    pub sequence: Option<ConflictSequence>,
 }
 
 impl Conflict {
@@ -32,13 +32,13 @@ impl FromXml for Conflict {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"conflict");
 
         // create a new `Conflict` with the right type
-        let mut conflict = decode_attribute(event, reader, "type", "conflict")
-            .map(Conflict::new)?;
+        let mut conflict =
+            decode_attribute(event, reader, "type", "conflict").map(Conflict::new)?;
 
         // extract optional reference
         conflict.reference = extract_attribute(event, "type")?
@@ -46,7 +46,7 @@ impl FromXml for Conflict {
             .transpose()?;
 
         // extract `sequence` element
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"sequence" => {
                 let sequence = FromXml::from_xml(&e, reader, buffer)?;
                 if conflict.sequence.replace(sequence).is_some() {
@@ -68,7 +68,7 @@ pub enum ConflictType {
     ErroneousTermination,
     ErroneousGeneModelPrediction,
     ErroneousTranslation,
-    MiscellaneousDiscrepancy
+    MiscellaneousDiscrepancy,
 }
 
 impl FromStr for ConflictType {
@@ -103,12 +103,12 @@ impl ConflictSequence {
 
     pub fn with_version<N>(id: String, resource: Resource, version: N) -> Self
     where
-        N: Into<Option<usize>>
+        N: Into<Option<usize>>,
     {
         Self {
             id,
             resource,
-            version: version.into()
+            version: version.into(),
         }
     }
 }
@@ -122,10 +122,12 @@ impl FromXml for ConflictSequence {
         debug_assert_eq!(event.local_name(), b"sequence");
 
         let attr = attributes_to_hashmap(event)?;
-        let id = attr.get(&b"id"[..])
+        let id = attr
+            .get(&b"id"[..])
             .ok_or(Error::MissingAttribute("id", "sequence"))?
             .unescape_and_decode_value(reader)?;
-        let version = attr.get(&b"version"[..])
+        let version = attr
+            .get(&b"version"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|s| usize::from_str(&s))

@@ -1,13 +1,13 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 #[derive(Debug, Clone)]
 pub struct Interaction {
@@ -37,16 +37,17 @@ impl FromXml for Interactant {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"interactant");
 
-        let mut interactant = event.attributes()
+        let mut interactant = event
+            .attributes()
             .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"intactId").unwrap_or_default())
             .ok_or(Error::MissingAttribute("intactId", "Interactant"))?
             .and_then(|a| a.unescape_and_decode_value(reader).map(Interactant::new))?;
 
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"id" => {
                 let id = reader.read_text(b"id", buffer)?;
                 if interactant.id.replace(id).is_some() {

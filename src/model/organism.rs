@@ -1,16 +1,16 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 use super::db_reference::DbReference;
 
@@ -27,18 +27,15 @@ impl FromXml for Organism {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert!(
-            event.local_name() == b"organism"
-            || event.local_name() == b"organismHost"
-        );
+        debug_assert!(event.local_name() == b"organism" || event.local_name() == b"organismHost");
 
         let attr = attributes_to_hashmap(event)?;
 
         let mut organism = Organism::default();
         organism.evidences = get_evidences(reader, &attr)?;
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"name" => {
                 organism.names.push(FromXml::from_xml(&e, reader, buffer)?);
             },
@@ -64,10 +61,7 @@ pub struct Name {
 
 impl Name {
     pub fn new(value: String, ty: NameType) -> Self {
-        Self {
-            value,
-            ty
-        }
+        Self { value, ty }
     }
 }
 
@@ -75,7 +69,7 @@ impl FromXml for Name {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"name");
 
@@ -119,12 +113,12 @@ impl FromXml for Lineage {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"lineage");
 
         let mut lineage = Lineage::default();
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"taxon" => {
                 lineage.taxons.push(reader.read_text(b"taxon", buffer)?);
             }

@@ -116,8 +116,8 @@ extern crate url;
 
 #[macro_use]
 pub mod parser;
-pub mod model;
 pub mod error;
+pub mod model;
 
 #[doc(inline)]
 pub use self::parser::Parser;
@@ -144,9 +144,9 @@ pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
 #[cfg(test)]
 mod tests {
 
-    use quick_xml::Error as XmlError;
-    use crate::error::Error;
     use super::*;
+    use crate::error::Error;
+    use quick_xml::Error as XmlError;
 
     #[test]
     fn parse_swissprot_200() {
@@ -183,9 +183,7 @@ mod tests {
                 other => panic!("unexpected error: {:?}", other),
             }
         }
-
     }
-
 
     #[cfg(feature = "threading")]
     mod threaded {

@@ -1,13 +1,13 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 #[derive(Debug, Default, Clone)]
 pub struct Keyword {
@@ -29,7 +29,8 @@ impl FromXml for Keyword {
 
         keyword.value = reader.read_text(b"keyword", buffer)?;
         keyword.evidence = get_evidences(reader, &attr)?;
-        keyword.id = attr.get(&b"id"[..])
+        keyword.id = attr
+            .get(&b"id"[..])
             .ok_or(Error::MissingAttribute("id", "keyword"))?
             .unescape_and_decode_value(reader)?;
 

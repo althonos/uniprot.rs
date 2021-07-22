@@ -1,29 +1,29 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::get_evidences;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 use super::super::db_reference::DbReference;
 
 #[derive(Debug, Clone)]
 pub struct CatalyticActivity {
     pub reaction: Reaction,
-    pub physiological_reactions: Vec<PhysiologicalReaction>
+    pub physiological_reactions: Vec<PhysiologicalReaction>,
 }
 
 impl CatalyticActivity {
     pub fn new(reaction: Reaction) -> Self {
         Self {
             reaction,
-            physiological_reactions: Vec::new()
+            physiological_reactions: Vec::new(),
         }
     }
 }
@@ -42,7 +42,7 @@ impl Reaction {
         Self {
             text,
             db_references: Default::default(),
-            evidences: Default::default()
+            evidences: Default::default(),
         }
     }
 }
@@ -59,7 +59,7 @@ impl FromXml for Reaction {
         let mut db_references = Vec::new();
         let mut opttext = None;
 
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"text" => {
                 let text = reader.read_text(b"text", buffer)?;
                 if opttext.replace(text).is_some() {
@@ -71,7 +71,8 @@ impl FromXml for Reaction {
             }
         }
 
-        let mut reaction = opttext.map(Reaction::new)
+        let mut reaction = opttext
+            .map(Reaction::new)
             .ok_or(Error::MissingAttribute("text", "reaction"))?;
         reaction.db_references = db_references;
         reaction.evidences = get_evidences(reader, &attr)?;
@@ -102,15 +103,10 @@ impl FromXml for PhysiologicalReaction {
 
         let attr = attributes_to_hashmap(event)?;
         let evidences = get_evidences(reader, &attr)?;
-        let direction = decode_attribute(
-            event,
-            reader,
-            "direction",
-            "physiologicalReaction"
-        )?;
+        let direction = decode_attribute(event, reader, "direction", "physiologicalReaction")?;
 
         let mut optdbref = None;
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"dbReference" => {
                 let dbref = FromXml::from_xml(&e, reader, buffer)?;
                 if optdbref.replace(dbref).is_some() {
@@ -119,9 +115,15 @@ impl FromXml for PhysiologicalReaction {
             }
         }
 
-        let db_reference = optdbref
-            .ok_or(Error::MissingAttribute("dbReference", "PhysiologicalReaction"))?;
-        Ok(PhysiologicalReaction { db_reference, direction, evidences })
+        let db_reference = optdbref.ok_or(Error::MissingAttribute(
+            "dbReference",
+            "PhysiologicalReaction",
+        ))?;
+        Ok(PhysiologicalReaction {
+            db_reference,
+            direction,
+            evidences,
+        })
     }
 }
 
@@ -130,7 +132,7 @@ impl FromXml for PhysiologicalReaction {
 #[derive(Debug, Clone)]
 pub enum Direction {
     LeftToRight,
-    RightToLeft
+    RightToLeft,
 }
 
 impl FromStr for Direction {
@@ -139,7 +141,7 @@ impl FromStr for Direction {
         match s {
             "left-to-right" => Ok(Direction::LeftToRight),
             "right-to-left" => Ok(Direction::RightToLeft),
-            other => Err(InvalidValue::from(other))
+            other => Err(InvalidValue::from(other)),
         }
     }
 }

@@ -1,27 +1,27 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::get_evidences;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 #[derive(Debug, Clone)]
 pub enum FeatureLocation {
     Range(Position, Position),
-    Position(Position)
+    Position(Position),
 }
 
 impl FromXml for FeatureLocation {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"location");
 
@@ -29,7 +29,7 @@ impl FromXml for FeatureLocation {
         let mut optend: Option<Position> = None;
         let mut optposition: Option<Position> = None;
 
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"begin" => {
                 let pos = Position::from_xml(&e, reader, buffer)?;
                 if optbegin.replace(pos).is_some() {
@@ -79,12 +79,12 @@ impl FromXml for Position {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert!(
             event.local_name() == b"begin"
-            || event.local_name() == b"end"
-            || event.local_name() == b"position"
+                || event.local_name() == b"end"
+                || event.local_name() == b"position"
         );
 
         let attr = attributes_to_hashmap(event)?;
@@ -94,14 +94,19 @@ impl FromXml for Position {
             Err(other) => return Err(other),
         };
         let evidence = get_evidences(reader, &attr)?;
-        let pos = attr.get(&b"position"[..])
+        let pos = attr
+            .get(&b"position"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| usize::from_str(&x))
             .transpose()?;
 
         reader.read_to_end(event.local_name(), buffer)?;
-        Ok(Position { pos, status, evidence })
+        Ok(Position {
+            pos,
+            status,
+            evidence,
+        })
     }
 }
 
@@ -131,7 +136,7 @@ impl FromStr for Status {
             "less than" => Ok(Status::LessThan),
             "greater than" => Ok(Status::GreaterThan),
             "unknown" => Ok(Status::Unknown),
-            other => Err(InvalidValue::from(other))
+            other => Err(InvalidValue::from(other)),
         }
     }
 }

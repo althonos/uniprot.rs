@@ -1,27 +1,27 @@
 use std::collections::HashSet;
 use std::io::BufRead;
 use std::io::Cursor;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::io::Error as IoError;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::thread::JoinHandle;
 use std::thread::Result as ThreadResult;
 use std::time::Duration;
-use std::io::Error as IoError;
 
 use bytes::Bytes;
 use crossbeam_channel::Receiver;
+use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::Sender;
 use crossbeam_channel::TryRecvError;
-use crossbeam_channel::RecvTimeoutError;
-use quick_xml::Reader;
 use quick_xml::events::Event;
 use quick_xml::Error as XmlError;
+use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::model::Entry;
 use crate::model::Dataset;
+use crate::model::Entry;
 use crate::parser::FromXml;
 
 pub struct Consumer {

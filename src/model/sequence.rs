@@ -1,15 +1,15 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
+use crate::parser::FromXml;
 
 #[derive(Debug, Default, Clone)]
 pub struct Sequence {
@@ -20,14 +20,14 @@ pub struct Sequence {
     // modified: NaiveDate,
     pub version: usize,
     pub precursor: Option<bool>,
-    pub fragment: Option<FragmentType>
+    pub fragment: Option<FragmentType>,
 }
 
 impl FromXml for Sequence {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"sequence");
 
@@ -41,7 +41,8 @@ impl FromXml for Sequence {
             .transpose()?
             .map(|x| bool::from_str(&x))
             .transpose()?;
-        let checksum = attr.get(&b"checksum"[..])
+        let checksum = attr
+            .get(&b"checksum"[..])
             .map(|x| x.unescape_and_decode_value(reader))
             .transpose()?
             .map(|x| u64::from_str_radix(&x, 16))

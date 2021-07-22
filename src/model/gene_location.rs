@@ -1,16 +1,16 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 #[derive(Debug, Clone)]
 /// Describes non-nuclear gene locations (organelles and plasmids).
@@ -35,16 +35,15 @@ impl FromXml for GeneLocation {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"geneLocation");
 
-        let mut geneloc = decode_attribute(event, reader, "type", "geneLocation")
-            .map(Self::new)?;
+        let mut geneloc = decode_attribute(event, reader, "type", "geneLocation").map(Self::new)?;
 
         let attr = attributes_to_hashmap(event)?;
         geneloc.evidences = get_evidences(reader, &attr)?;
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"name" => {
                 geneloc.names.push(FromXml::from_xml(&e, reader, buffer)?);
             }
@@ -85,7 +84,7 @@ impl FromStr for LocationType {
             "nucleomorph" => Ok(Nucleomorph),
             "plasmid" => Ok(Plasmid),
             "plastid" => Ok(Plastid),
-            other => Err(InvalidValue::from(other))
+            other => Err(InvalidValue::from(other)),
         }
     }
 }
@@ -95,7 +94,7 @@ impl FromStr for LocationType {
 #[derive(Debug, Clone)]
 pub struct LocationName {
     pub value: String,
-    pub status: LocationStatus
+    pub status: LocationStatus,
 }
 
 impl LocationName {
@@ -106,10 +105,7 @@ impl LocationName {
 
     /// Create a new `LocationName` with a given status.
     pub fn with_status(value: String, status: LocationStatus) -> Self {
-        Self {
-            value,
-            status
-        }
+        Self { value, status }
     }
 }
 
@@ -117,7 +113,7 @@ impl FromXml for LocationName {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"name");
 

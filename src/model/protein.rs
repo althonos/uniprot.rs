@@ -1,15 +1,15 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
-use crate::parser::utils::get_evidences;
-use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
+use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 #[derive(Debug, Clone, Default)]
 /// Describes the names for the protein and parts thereof.
@@ -23,7 +23,7 @@ impl FromXml for Protein {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         let mut protein = Protein::default();
         parse_inner! {event, reader, buffer,
@@ -76,7 +76,7 @@ pub struct Nomenclature {
     pub recommended: Option<Name>,
     pub alternative: Vec<Name>,
     pub submitted: Vec<Name>,
-    pub allergen: Option<String>,     // FIXME: type should be EvidenceString?
+    pub allergen: Option<String>, // FIXME: type should be EvidenceString?
     pub biotech: Option<String>,
     pub cd_antigen: Vec<String>,
     pub inn: Vec<String>,
@@ -93,11 +93,11 @@ impl FromXml for Name {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         let mut group = Self::default();
 
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"fullName" => {
                 group.full = reader.read_text(b"fullName", buffer)?;
             },
@@ -148,7 +148,7 @@ impl FromXml for ProteinExistence {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"proteinExistence");
         reader.read_to_end(event.local_name(), buffer)?;

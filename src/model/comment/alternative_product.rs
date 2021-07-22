@@ -1,16 +1,16 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::get_evidences;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
+use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 #[derive(Debug, Default, Clone)]
 pub struct AlternativeProduct {
@@ -88,7 +88,7 @@ impl FromXml for Isoform {
         let mut texts = Vec::new();
         let mut optseq: Option<IsoformSequence> = None;
 
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"id" => {
                 ids.push(reader.read_text(b"id", buffer)?);
             },
@@ -132,11 +132,11 @@ impl IsoformSequence {
 
     pub fn with_reference<R>(ty: IsoformSequenceType, reference: R) -> Self
     where
-        R: Into<Option<String>>
+        R: Into<Option<String>>,
     {
         Self {
             ty,
-            reference: reference.into()
+            reference: reference.into(),
         }
     }
 }
@@ -166,7 +166,7 @@ pub enum IsoformSequenceType {
     NotDescribed,
     Described,
     Displayed,
-    External
+    External,
 }
 
 impl FromStr for IsoformSequenceType {

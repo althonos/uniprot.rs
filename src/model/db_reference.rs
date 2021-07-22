@@ -1,11 +1,11 @@
 use std::io::BufRead;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::FromXml;
 use crate::parser::utils::extract_attribute;
+use crate::parser::FromXml;
 
 use super::molecule::Molecule;
 use super::property::Property;
@@ -24,12 +24,12 @@ impl FromXml for DbReference {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"dbReference");
 
         let mut db_reference = DbReference::default();
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"property" => {
                 db_reference.property.push(Property::from_xml(&e, reader, buffer)?);
             },

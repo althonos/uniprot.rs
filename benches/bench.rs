@@ -5,17 +5,18 @@ extern crate test;
 extern crate uniprot;
 
 use std::fs::File;
-use std::io::BufReader;
 use std::io::BufRead;
+use std::io::BufReader;
 use std::io::Cursor;
 
-use test::Bencher;
 use quick_xml::events::Event;
+use test::Bencher;
 
 #[bench]
 fn bench_read(b: &mut Bencher) {
     let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r.lines()
+    let mut txt = r
+        .lines()
         .take(100442)
         .collect::<Result<String, _>>()
         .unwrap();
@@ -33,7 +34,8 @@ fn bench_read(b: &mut Bencher) {
 #[bench]
 fn bench_quickxml(b: &mut Bencher) {
     let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r.lines()
+    let mut txt = r
+        .lines()
         .take(100442)
         .collect::<Result<String, _>>()
         .unwrap();
@@ -53,18 +55,18 @@ fn bench_quickxml(b: &mut Bencher) {
                         events.push(event.into_owned());
                     }
                     _ => (),
-                }
+                },
             }
         }
-     });
+    });
     b.bytes = txt.as_bytes().len() as u64;
 }
 
 #[bench]
 fn bench_sequential_parser(b: &mut Bencher) {
-
     let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r.lines()
+    let mut txt = r
+        .lines()
         .take(100442)
         .collect::<Result<String, _>>()
         .unwrap();
@@ -81,9 +83,9 @@ fn bench_sequential_parser(b: &mut Bencher) {
 
 #[bench]
 fn bench_threaded_parser(b: &mut Bencher) {
-
     let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r.lines()
+    let mut txt = r
+        .lines()
         .take(100442)
         .collect::<Result<String, _>>()
         .unwrap();

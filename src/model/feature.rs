@@ -1,15 +1,15 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 use super::feature_location::FeatureLocation;
 
@@ -47,7 +47,7 @@ impl FromXml for Feature {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"feature");
 
@@ -60,7 +60,7 @@ impl FromXml for Feature {
         let mut variation: Vec<String> = Vec::new();
         let mut original: Option<String> = None;
         let mut optloc: Option<FeatureLocation> = None;
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"location" => {
                 let loc = FeatureLocation::from_xml(&e, reader, buffer)?;
                 if optloc.replace(loc).is_some() {
@@ -76,21 +76,23 @@ impl FromXml for Feature {
         }
 
         // assume the location was found and extract the feature type
-        let location = optloc
-            .ok_or(Error::MissingAttribute("location", "feature"))?;
+        let location = optloc.ok_or(Error::MissingAttribute("location", "feature"))?;
 
         // create a new Feature with the right `type`
         let mut feature = decode_attribute(event, reader, "type", "feature")
             .map(|ty| Feature::new(ty, location))?;
 
         // extract optional attributes
-        feature.id = attr.get(&b"id"[..])
+        feature.id = attr
+            .get(&b"id"[..])
             .map(|a| a.unescape_and_decode_value(reader))
             .transpose()?;
-        feature.description = attr.get(&b"description"[..])
+        feature.description = attr
+            .get(&b"description"[..])
             .map(|a| a.unescape_and_decode_value(reader))
             .transpose()?;
-        feature.reference = attr.get(&b"ref"[..])
+        feature.reference = attr
+            .get(&b"ref"[..])
             .map(|a| a.unescape_and_decode_value(reader))
             .transpose()?;
         feature.evidences = get_evidences(reader, &attr)?;
@@ -143,7 +145,7 @@ pub enum FeatureType {
     Turn,
     UnsureResidue,
     ZincFingerRegion,
-    IntramembraneRegion
+    IntramembraneRegion,
 }
 
 impl FromStr for FeatureType {

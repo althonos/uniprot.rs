@@ -28,32 +28,32 @@ mod macros;
 
 use std::collections::HashSet;
 use std::io::BufRead;
+use std::num::NonZeroUsize;
 use std::str::FromStr;
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
-use std::num::NonZeroUsize;
 
 use bytes::Bytes;
 #[cfg(feature = "threading")]
 use crossbeam_channel::Receiver;
 #[cfg(feature = "threading")]
-use crossbeam_channel::Sender;
-#[cfg(feature = "threading")]
 use crossbeam_channel::RecvTimeoutError;
 #[cfg(feature = "threading")]
+use crossbeam_channel::Sender;
+#[cfg(feature = "threading")]
 use crossbeam_channel::TryRecvError;
-use quick_xml::Reader;
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::BytesEnd;
 use quick_xml::events::BytesStart;
 use quick_xml::events::Event;
 use quick_xml::Error as XmlError;
+use quick_xml::Reader;
 
-use super::model::*;
 use super::error::Error;
+use super::model::*;
 
 #[cfg(feature = "threading")]
 use self::consumer::Consumer;
@@ -78,7 +78,7 @@ pub struct ThreadedParser<B: BufRead> {
     state: State,
     threads: usize,
     consumers: Vec<Consumer>,
-    r_item:  Receiver<Result<Entry, Error>>,
+    r_item: Receiver<Result<Entry, Error>>,
     s_text: Sender<Option<Vec<u8>>>,
 }
 
@@ -93,7 +93,9 @@ impl<B: BufRead> ThreadedParser<B> {
     ///
     /// [`num_cpus::get`]: https://docs.rs/num_cpus/1.12.0/num_cpus/fn.get.html
     pub fn new(reader: B) -> Self {
-        lazy_static !{ static ref THREADS: usize = num_cpus::get(); }
+        lazy_static! {
+            static ref THREADS: usize = num_cpus::get();
+        }
         let threads = unsafe { NonZeroUsize::new_unchecked(*THREADS) };
         Self::with_threads(reader, threads)
     }
@@ -123,19 +125,21 @@ impl<B: BufRead> ThreadedParser<B> {
             match xml.read_event(&mut buffer) {
                 Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break,
                 Err(e) => {
-                    s_item.send(Err(Error::from(e)))
+                    s_item
+                        .send(Err(Error::from(e)))
                         .expect("channel should still be connected");
                     break;
                 }
                 Ok(Event::Eof) => {
                     let e = String::from("xml");
-                    s_item.send(Err(Error::from(XmlError::UnexpectedEof(e))))
+                    s_item
+                        .send(Err(Error::from(XmlError::UnexpectedEof(e))))
                         .expect("channel should still be connected");
                     break;
                 }
                 _ => (),
             }
-        };
+        }
 
         // create the consumer and the workers
         let mut consumers = Vec::with_capacity(threads);
@@ -305,7 +309,7 @@ impl<B: BufRead> Iterator for SequentialParser<B> {
                 Ok(Event::End(ref e)) if e.local_name() == b"uniprot" => {
                     self.finished = true;
                     return None;
-                },
+                }
                 // create a new Entry
                 Ok(Event::Start(ref e)) if e.local_name() == b"entry" => {
                     return Some(Entry::from_xml(
@@ -313,10 +317,10 @@ impl<B: BufRead> Iterator for SequentialParser<B> {
                         &mut self.xml,
                         &mut self.buffer,
                     ));
-                },
+                }
                 _ => (),
             }
-        };
+        }
     }
 }
 
@@ -330,6 +334,6 @@ pub(crate) trait FromXml: Sized {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error>;
 }

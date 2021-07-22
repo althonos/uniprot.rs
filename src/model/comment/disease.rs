@@ -1,13 +1,13 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 use super::super::db_reference::DbReference;
 
@@ -24,7 +24,7 @@ impl FromXml for Disease {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"disease");
 
@@ -33,12 +33,13 @@ impl FromXml for Disease {
         let mut optacro = None;
         let mut optdbref = None;
 
-        let id = event.attributes()
+        let id = event
+            .attributes()
             .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"id").unwrap_or_default())
             .ok_or(Error::MissingAttribute("id", "disease"))??
             .unescape_and_decode_value(reader)?;
 
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"name" => {
                 let name = reader.read_text(b"name", buffer)?;
                 if optname.replace(name).is_some() {
@@ -72,6 +73,5 @@ impl FromXml for Disease {
             acronym: optacro.ok_or(Error::MissingElement("acronym", "disease"))?,
             db_reference: optdbref.ok_or(Error::MissingElement("dbReference", "disease"))?,
         })
-
     }
 }

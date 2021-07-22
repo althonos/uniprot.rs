@@ -1,15 +1,15 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
+use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::FromXml;
 use crate::parser::utils::attributes_to_hashmap;
-use crate::parser::utils::get_evidences;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::get_evidences;
+use crate::parser::FromXml;
 
 use super::db_reference::DbReference;
 
@@ -39,7 +39,7 @@ impl FromXml for Reference {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"reference");
 
@@ -47,7 +47,7 @@ impl FromXml for Reference {
         let mut scope = Vec::new();
         let mut optcit = None;
 
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             b"scope" => {
                 scope.push(reader.read_text(b"scope", buffer)?);
             },
@@ -67,7 +67,8 @@ impl FromXml for Reference {
 
         let attr = attributes_to_hashmap(event)?;
         reference.evidences = get_evidences(reader, &attr)?;
-        reference.key = attr.get(&b"key"[..])
+        reference.key = attr
+            .get(&b"key"[..])
             .map(|a| a.unescape_and_decode_value(reader))
             .ok_or(Error::MissingAttribute("key", "reference"))?
             .map(|x| usize::from_str(&x))??;
@@ -132,7 +133,7 @@ impl FromXml for Citation {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"citation");
 
@@ -152,12 +153,13 @@ impl FromXml for Citation {
         // citation.date = attr.get(&b"date"[..])
         //     .map(|v| v.unescape_and_decode_value(&mut self.xml))
         //     .transpose()?;
-        citation.name = attr.get(&b"name"[..])
+        citation.name = attr
+            .get(&b"name"[..])
             .map(|v| v.unescape_and_decode_value(reader))
             .transpose()?;
 
         // update citation with children elements
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"authorList" => {
                 parse_inner!{e, reader, buffer,
                     b"person" => {
@@ -260,7 +262,7 @@ impl Source {
         Self {
             value,
             ty,
-            evidences
+            evidences,
         }
     }
 }
@@ -269,14 +271,14 @@ impl FromXml for Vec<Source> {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
-        buffer: &mut Vec<u8>
+        buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name(), b"source");
 
         use self::SourceType::*;
 
         let mut sources = Vec::new();
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"strain" => {
                 let value = reader.read_text(b"strain", buffer)?;
                 let evidences = attributes_to_hashmap(&e)

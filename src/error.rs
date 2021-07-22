@@ -5,9 +5,9 @@ use std::io::Error as IoError;
 use std::num::ParseIntError;
 use std::str::ParseBoolError;
 
+use quick_xml::Error as XmlError;
 use thiserror::Error;
 use url::ParseError as ParseUrlError;
-use quick_xml::Error as XmlError;
 
 #[derive(Debug, Error)]
 /// The main error type for the [`uniprot`] crate.
@@ -45,7 +45,7 @@ impl Error {
     pub fn invalid_value<S: Into<String>>(
         name: &'static str,
         elem: &'static str,
-        value: S
+        value: S,
     ) -> Self {
         Error::InvalidValue(name, elem, InvalidValue(value.into()))
     }
