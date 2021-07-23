@@ -7,15 +7,14 @@
 
 mod date;
 mod member;
-mod property;
 mod reference;
 mod sequence;
 
 pub use self::date::NaiveDate;
 pub use self::member::Member;
-pub use self::property::Property;
 pub use self::reference::Reference;
 pub use self::sequence::Sequence;
+pub use crate::common::property::Property;
 
 use std::io::BufRead;
 use crate::parser::utils::decode_attribute;

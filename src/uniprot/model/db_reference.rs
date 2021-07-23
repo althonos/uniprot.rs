@@ -8,7 +8,7 @@ use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 
 use super::molecule::Molecule;
-use super::property::Property;
+use crate::common::property::Property;
 
 #[derive(Debug, Default, Clone)]
 /// A database cross-reference.

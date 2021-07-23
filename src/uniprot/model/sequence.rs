@@ -12,6 +12,7 @@ use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 
 #[derive(Debug, Default, Clone)]
+/// The sequence of a protein.
 pub struct Sequence {
     pub value: String,
     pub length: usize,
@@ -69,9 +70,16 @@ impl FromXml for Sequence {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// A marker indicating whether a protein sequence is fragmented.
 pub enum FragmentType {
     Single,
     Multiple,
+}
+
+impl Default for FragmentType {
+    fn default() -> Self {
+        FragmentType::Single
+    }
 }
 
 impl FromStr for FragmentType {

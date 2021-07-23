@@ -45,6 +45,7 @@ pub enum Error {
     InvalidValue(&'static str, &'static str, #[source] InvalidValue),
     #[cfg(feature = "threading")]
     #[error("unexpected threading channel disconnection")]
+    /// A communication channel between threads was disconnected early.
     DisconnectedChannel,
 }
 

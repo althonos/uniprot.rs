@@ -11,7 +11,7 @@ use crate::error::Error;
 #[derive(Debug, Clone)]
 pub struct Sequence {
     pub sequence: String,
-    pub length: u64,
+    pub length: usize,
     pub checksum: u64,
 }
 

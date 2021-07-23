@@ -14,7 +14,7 @@ use crate::parser::FromXml;
 use super::db_reference::DbReference;
 
 #[derive(Debug, Clone)]
-/// Describes a citation and a summary of its content.
+/// A citation, also contain a summary of its content.
 pub struct Reference {
     pub key: usize,
     pub citation: Citation,
@@ -80,7 +80,7 @@ impl FromXml for Reference {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-/// Describes a single citation.
+/// A single citation.
 pub struct Citation {
     // attributes
     /// Describe the type of this citation.
@@ -214,7 +214,7 @@ impl FromXml for Citation {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-/// Describes the type of a citation.
+/// The type of a citation.
 pub enum CitationType {
     Book,
     JournalArticle,
@@ -245,7 +245,7 @@ impl FromStr for CitationType {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-/// Describe a single author in a citation.
+/// A single author in a citation.
 pub enum Creator {
     /// The author of a citation when these are represented by a consortium.
     Consortium(String),
@@ -256,7 +256,7 @@ pub enum Creator {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-/// Describes the source of the sequence according to the citation.
+/// The source of the protein sequence according to the citation.
 pub struct Source {
     pub value: String,
     pub ty: SourceType,
@@ -322,7 +322,7 @@ impl FromXml for Vec<Source> {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
-/// Describes the kind of source where a sequence can originate from.
+/// The kind of sources where a sequence can originate from.
 pub enum SourceType {
     Strain,
     Plasmid,

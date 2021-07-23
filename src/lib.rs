@@ -145,6 +145,7 @@ pub mod parser;
 pub mod error;
 pub mod uniprot;
 pub mod uniref;
+mod common;
 
 #[doc(inline)]
 pub use self::parser::Parser;
@@ -152,7 +153,7 @@ pub use self::parser::Parser;
 #[doc(hidden)]
 #[deprecated(
     since="v0.4.0",
-    note = "UniProt code has been moved to the uniprot module, use `uniprot::uniprot::parse` instead"
+    note = "UniProt code has been moved to the `uniprot` module, use `uniprot::uniprot::parse` instead"
 )]
 #[inline(always)]
 pub fn parse<B: std::io::BufRead>(reader: B) -> Parser<B, self::uniprot::Entry> {

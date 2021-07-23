@@ -19,7 +19,6 @@ mod sequence;
 mod db_reference;
 mod keyword;
 mod molecule;
-mod property;
 
 pub use self::evidence::Evidence;
 pub use self::evidence::Source;
@@ -28,9 +27,9 @@ pub use self::feature::Feature;
 pub use self::feature::FeatureType;
 pub use self::keyword::Keyword;
 pub use self::molecule::Molecule;
-pub use self::property::Property;
 pub use self::sequence::Sequence;
 pub use self::sequence::FragmentType;
+pub use crate::common::property::Property;
 
 use std::collections::HashSet;
 use std::io::BufRead;
