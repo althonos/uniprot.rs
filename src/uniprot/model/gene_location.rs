@@ -131,6 +131,7 @@ impl FromXml for LocationName {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// Indicates whether the name of a plasmid is known or unknown.
 pub enum LocationStatus {
     Known,
     Unknown,

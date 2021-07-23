@@ -1,13 +1,15 @@
-pub mod alternative_product;
-pub mod bpc_properties;
-pub mod catalytic_activity;
-pub mod cofactor;
-pub mod conflict;
-pub mod disease;
-pub mod interaction;
-pub mod mass_spectrometry;
-pub mod online_information;
-pub mod subcellular_location;
+//! The different kind of annotations that can be attached to an entry.
+
+mod alternative_product;
+mod bpc_properties;
+mod catalytic_activity;
+mod cofactor;
+mod conflict;
+mod disease;
+mod interaction;
+mod mass_spectrometry;
+mod online_information;
+mod subcellular_location;
 
 use std::io::BufRead;
 use std::str::FromStr;
@@ -23,17 +25,29 @@ use crate::parser::FromXml;
 use super::feature_location::FeatureLocation;
 use super::molecule::Molecule;
 
-use self::alternative_product::AlternativeProduct;
-use self::bpc_properties::BiophysicochemicalProperties;
-use self::catalytic_activity::CatalyticActivity;
-use self::cofactor::Cofactor;
-use self::conflict::Conflict;
-use self::disease::Disease;
-use self::interaction::Interactant;
-use self::interaction::Interaction;
-use self::mass_spectrometry::MassSpectrometry;
-use self::online_information::OnlineInformation;
-use self::subcellular_location::SubcellularLocation;
+pub use self::alternative_product::AlternativeProduct;
+pub use self::alternative_product::Event;
+pub use self::alternative_product::Isoform;
+pub use self::alternative_product::IsoformSequence;
+pub use self::alternative_product::IsoformSequenceType;
+pub use self::bpc_properties::BiophysicochemicalProperties;
+pub use self::bpc_properties::Absorption;
+pub use self::bpc_properties::Kinetics;
+pub use self::catalytic_activity::CatalyticActivity;
+pub use self::catalytic_activity::Reaction;
+pub use self::catalytic_activity::PhysiologicalReaction;
+pub use self::catalytic_activity::Direction;
+pub use self::cofactor::Cofactor;
+pub use self::conflict::Conflict;
+pub use self::conflict::ConflictType;
+pub use self::conflict::ConflictSequence;
+pub use self::conflict::Resource;
+pub use self::disease::Disease;
+pub use self::interaction::Interactant;
+pub use self::interaction::Interaction;
+pub use self::mass_spectrometry::MassSpectrometry;
+pub use self::online_information::OnlineInformation;
+pub use self::subcellular_location::SubcellularLocation;
 
 #[derive(Debug, Clone)]
 /// Describes different types of general annotations.

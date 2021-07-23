@@ -9,7 +9,7 @@ use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
 #[derive(Debug, Default, Clone)]
-/// Describes the subcellular location and optionally the topology and orientation of a molecule.
+/// The subcellular location (and optionally the topology and orientation) of a molecule.
 pub struct SubcellularLocation {
     pub locations: Vec<String>,    // TODO: EvidenceString, minOccurs = "1"
     pub topologies: Vec<String>,   // TODO: EvidenceString,

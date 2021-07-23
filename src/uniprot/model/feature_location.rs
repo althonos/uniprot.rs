@@ -12,6 +12,7 @@ use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
 #[derive(Debug, Clone)]
+/// Describes the location where a feature can be found within a sequence.
 pub enum FeatureLocation {
     Range(Position, Position),
     Position(Position),

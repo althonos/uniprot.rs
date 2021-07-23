@@ -72,6 +72,7 @@ impl FromXml for Protein {
 }
 
 #[derive(Debug, Clone, Default)]
+/// The different names that can be attached to a single protein.
 pub struct Nomenclature {
     pub recommended: Option<Name>,
     pub alternative: Vec<Name>,
@@ -83,6 +84,7 @@ pub struct Nomenclature {
 }
 
 #[derive(Debug, Clone, Default)]
+/// A single name in use for a protein.
 pub struct Name {
     pub full: String,
     pub short: Vec<String>,
@@ -114,7 +116,7 @@ impl FromXml for Name {
 }
 
 #[derive(Debug, Clone)]
-/// Describes the evidence for the protein's existence.
+/// The evidence supporting the existence of a protein.
 pub enum ProteinExistence {
     ProteinLevelEvidence,
     TranscriptLevelEvidence,

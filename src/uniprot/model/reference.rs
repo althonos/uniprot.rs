@@ -83,17 +83,25 @@ impl FromXml for Reference {
 /// Describes a single citation.
 pub struct Citation {
     // attributes
+    /// Describe the type of this citation.
     pub ty: CitationType,
     // date: Option<NaiveDate>,
+    /// Describes the name of an (online) journal or book.
     pub name: Option<String>,
+    /// Describes the volume of a journal or book.
     pub volume: Option<String>,
+    /// Describes the first page of an article.
     pub first: Option<String>,
+    /// Describes the last page of an article.
     pub last: Option<String>,
+    /// Describes the publisher of a book.
     pub publisher: Option<String>,
+    /// Describes the city where a book was published.
     pub city: Option<String>,
+    /// Describes the database name of submissions.
     pub db: Option<String>,
+    /// Describes a patent number.
     pub number: Option<String>,
-
     // fields
     /// Describes the title of a citation.
     pub titles: Vec<String>,
@@ -206,6 +214,7 @@ impl FromXml for Citation {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// Describes the type of a citation.
 pub enum CitationType {
     Book,
     JournalArticle,
@@ -236,10 +245,11 @@ impl FromStr for CitationType {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// Describe a single author in a citation.
 pub enum Creator {
-    /// Describes the author of a citation when these are represented by a consortium.
+    /// The author of a citation when these are represented by a consortium.
     Consortium(String),
-    /// Describes the author of a citation when they are an individual.
+    /// The author of a citation when they are an individual.
     Person(String),
 }
 
@@ -312,6 +322,7 @@ impl FromXml for Vec<Source> {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// Describes the kind of source where a sequence can originate from.
 pub enum SourceType {
     Strain,
     Plasmid,

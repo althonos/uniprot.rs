@@ -14,13 +14,18 @@ use crate::parser::FromXml;
 use super::feature_location::FeatureLocation;
 
 #[derive(Debug, Clone)]
+/// Describes different types of sequence annotations
 pub struct Feature {
     // fields
+    /// Describes the original sequence in annotations that describe natural or artifical sequence variations.
     pub original: Option<String>,
+    /// Describes the variant sequence in annotations that describe natural or artifical sequence variations.
     pub variation: Vec<String>,
+    /// Describes the sequence coordinates of the annotation.
     pub location: FeatureLocation,
 
     // attributes
+    /// Describes the type of a sequence annotation
     pub ty: FeatureType,
     pub id: Option<String>,
     pub description: Option<String>,
@@ -106,6 +111,7 @@ impl FromXml for Feature {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
+/// The type of annotations that can be attached to a sequence.
 pub enum FeatureType {
     ActiveSite,
     BindingSite,
