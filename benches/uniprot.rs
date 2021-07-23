@@ -9,19 +9,13 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Cursor;
 
+use uniprot::uniprot::model::Entry;
 use quick_xml::events::Event;
 use test::Bencher;
 
 #[bench]
 fn bench_read(b: &mut Bencher) {
-    let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r
-        .lines()
-        .take(100442)
-        .collect::<Result<String, _>>()
-        .unwrap();
-    txt.push_str("</uniprot>");
-
+    let txt = std::fs::read_to_string("tests/uniprot.xml").unwrap();
     b.iter(|| {
         Cursor::new(&txt)
             .lines()
@@ -33,14 +27,7 @@ fn bench_read(b: &mut Bencher) {
 
 #[bench]
 fn bench_quickxml(b: &mut Bencher) {
-    let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r
-        .lines()
-        .take(100442)
-        .collect::<Result<String, _>>()
-        .unwrap();
-    txt.push_str("</uniprot>");
-
+    let txt = std::fs::read_to_string("tests/uniprot.xml").unwrap();
     b.iter(|| {
         let mut r = quick_xml::Reader::from_reader(Cursor::new(&txt));
         let mut events = Vec::new();
@@ -64,16 +51,9 @@ fn bench_quickxml(b: &mut Bencher) {
 
 #[bench]
 fn bench_sequential_parser(b: &mut Bencher) {
-    let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r
-        .lines()
-        .take(100442)
-        .collect::<Result<String, _>>()
-        .unwrap();
-    txt.push_str("</uniprot>");
-
+    let txt = std::fs::read_to_string("tests/uniprot.xml").unwrap();
     b.iter(|| {
-        for entry in uniprot::parser::SequentialParser::new(Cursor::new(&txt)) {
+        for entry in uniprot::parser::SequentialParser::<_, Entry>::new(Cursor::new(&txt)) {
             entry.unwrap();
         }
     });
@@ -83,16 +63,9 @@ fn bench_sequential_parser(b: &mut Bencher) {
 
 #[bench]
 fn bench_threaded_parser(b: &mut Bencher) {
-    let r = File::open("uniprot.xml").map(BufReader::new).unwrap();
-    let mut txt = r
-        .lines()
-        .take(100442)
-        .collect::<Result<String, _>>()
-        .unwrap();
-    txt.push_str("</uniprot>");
-
+    let txt = std::fs::read_to_string("tests/uniprot.xml").unwrap();
     b.iter(|| {
-        for entry in uniprot::parser::ThreadedParser::new(Cursor::new(&txt)) {
+        for entry in uniprot::parser::ThreadedParser::<_, Entry>::new(Cursor::new(&txt)) {
             entry.unwrap();
         }
     });
