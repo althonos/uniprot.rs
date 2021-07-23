@@ -16,8 +16,8 @@
 
 ## 🔌 Usage
 
-The `uniprot::parse` function can be used to obtain an iterator over the entries
-of a UniprotKB database in XML format (either SwissProt or TrEMBL).
+The `uniprot::uniprot::parse` function can be used to obtain an iterator over
+the entries (`of a UniprotKB database in XML format (either SwissProt or TrEMBL).
 
 ```rust
 extern crate uniprot;
@@ -26,7 +26,7 @@ let f = std::fs::File::open("tests/uniprot.xml")
    .map(std::io::BufReader::new)
    .unwrap();
 
-for r in uniprot::parse(f) {
+for r in uniprot::uniprot::parse(f) {
    let entry = r.unwrap();
    // ... process the Uniprot entry ...
 }

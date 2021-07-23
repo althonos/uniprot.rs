@@ -1,4 +1,4 @@
-//! UniprotKB XML parser implementation.
+//! XML parser implementation.
 //!
 //! This module provides two parsers, one using multithreading to consume
 //! the input, and another one performing everything in the main thread.
@@ -8,7 +8,7 @@
 //!
 //! Some benchmarks results on an i7-8550U CPU running at 1.80GHz, where the
 //! baseline only collect [`quick-xml`] events without deserializing them into
-//! the appropriate owned types from [`::model`]:
+//! the appropriate owned types from [`::uniprot`]:
 //!
 //! ```text
 //! test bench_baseline          ... bench:  33,280,101 ns/iter (+/- 1,154,274) = 119 MB/s
@@ -16,7 +16,7 @@
 //! test bench_threaded_parser   ... bench:  27,767,008 ns/iter (+/- 6,527,132) = 143 MB/s
 //! ```
 //!
-//! [`::model`]: ../model/index.html
+//! [`::uniprot`]: ../uniprot/index.html
 //! [`quick-xml`]: https://docs.rs/quick-xml
 
 pub(crate) mod utils;
@@ -72,7 +72,7 @@ enum State {
 }
 
 #[cfg(feature = "threading")]
-/// A parser for the Uniprot XML format that parses entries in parallel.
+/// A parser for the Uniprot XML formats that parses entries in parallel.
 pub struct ThreadedParser<B: BufRead, E: FromXml + Send + 'static> {
     reader: B,
     state: State,
@@ -272,7 +272,7 @@ pub type Parser<B, E> = ThreadedParser<B, E>;
 
 // --------------------------------------------------------------------------
 
-/// A parser for the Uniprot XML format that  parses entries sequentially.
+/// A parser for the Uniprot XML formats that parses entries sequentially.
 pub struct SequentialParser<B: BufRead, E: FromXml> {
     xml: Reader<B>,
     buffer: Vec<u8>,
@@ -366,6 +366,7 @@ pub type Parser<B, E> = SequentialParser<B, E>;
 
 // ---------------------------------------------------------------------------
 
+/// A trait for types that can be parsed from an XML element.
 pub trait FromXml: Sized {
     fn from_xml<B: BufRead>(
         event: &BytesStart,

@@ -1,8 +1,12 @@
+//! Data types for the UniProtKB databases.
+
 use std::io::BufRead;
 
-pub mod model;
+mod model;
 
-use self::model::Entry;
+#[doc(inline)]
+pub use self::model::*;
+
 use super::parser::Parser;
 
 /// Parse a Uniprot database XML file.

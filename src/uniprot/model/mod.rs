@@ -6,25 +6,31 @@
 //! [Uniprot XML schema]: https://www.uniprot.org/docs/uniprot.xsd
 
 pub mod comment;
-pub mod evidence;
-pub mod feature;
 pub mod feature_location;
 pub mod gene;
 pub mod gene_location;
 pub mod organism;
 pub mod protein;
 pub mod reference;
-pub mod sequence;
 
+mod evidence;
+mod feature;
+mod sequence;
 mod db_reference;
 mod keyword;
 mod molecule;
 mod property;
 
+pub use self::evidence::Evidence;
+pub use self::evidence::Source;
 pub use self::db_reference::DbReference;
+pub use self::feature::Feature;
+pub use self::feature::FeatureType;
 pub use self::keyword::Keyword;
 pub use self::molecule::Molecule;
 pub use self::property::Property;
+pub use self::sequence::Sequence;
+pub use self::sequence::FragmentType;
 
 use std::collections::HashSet;
 use std::io::BufRead;
@@ -39,15 +45,12 @@ use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::FromXml;
 
 use self::comment::Comment;
-use self::evidence::Evidence;
-use self::feature::Feature;
 use self::gene::Gene;
 use self::gene_location::GeneLocation;
 use self::organism::Organism;
 use self::protein::Protein;
 use self::protein::ProteinExistence;
 use self::reference::Reference;
-use self::sequence::Sequence;
 
 #[derive(Debug, Clone)]
 /// A UniProtKB entry.
