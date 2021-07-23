@@ -118,8 +118,7 @@ extern crate url;
 pub mod parser;
 pub mod error;
 pub mod uniprot;
+pub mod uniref;
 
 #[doc(inline)]
 pub use self::parser::Parser;
-
-use std::io::BufRead;
