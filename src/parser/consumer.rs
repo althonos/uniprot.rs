@@ -20,21 +20,19 @@ use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::model::Dataset;
-use crate::model::Entry;
 use crate::parser::FromXml;
 
-pub struct Consumer {
+pub struct Consumer<E: FromXml + Send + 'static> {
     r_text: Receiver<Option<Vec<u8>>>,
-    s_item: Sender<Result<Entry, Error>>,
+    s_item: Sender<Result<E, Error>>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl Consumer {
+impl<E: FromXml + Send + 'static> Consumer<E> {
     pub(super) fn new(
         r_text: Receiver<Option<Vec<u8>>>,
-        s_item: Sender<Result<Entry, Error>>,
+        s_item: Sender<Result<E, Error>>,
     ) -> Self {
         Self {
             r_text,
@@ -85,10 +83,10 @@ impl Consumer {
                         return;
                     }
                     Ok(Event::Start(s)) if s.local_name() == b"entry" => {
-                        let e = Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
+                        let e = E::from_xml(&s.into_owned(), &mut xml, &mut buffer);
                         s_item.send(e).ok();
                     }
-                    _ => unreachable!("unexpected XML event"),
+                    e => unreachable!("unexpected XML event: {:?}", e),
                 }
 
                 // clear the event buffer

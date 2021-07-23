@@ -60,11 +60,12 @@ use self::consumer::Consumer;
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "threading")]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 /// The state of the `ThreadedParser`.
 enum State {
     Idle,
     Started,
+    Reading,
     AtEof,
     Waiting,
     Finished,
@@ -72,17 +73,19 @@ enum State {
 
 #[cfg(feature = "threading")]
 /// A parser for the Uniprot XML format that parses entries in parallel.
-pub struct ThreadedParser<B: BufRead, E: FromXml> {
+pub struct ThreadedParser<B: BufRead, E: FromXml + Send + 'static> {
     reader: B,
     state: State,
     threads: usize,
-    consumers: Vec<Consumer>,
+    consumers: Vec<Consumer<E>>,
     r_item: Receiver<Result<E, Error>>,
     s_text: Sender<Option<Vec<u8>>>,
+    root: Vec<u8>,
+    buffer: Vec<u8>,
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead, E: FromXml> ThreadedParser<B, E> {
+impl<B: BufRead, E: FromXml + Send + 'static> ThreadedParser<B, E> {
     /// Create a new `ThreadedParser` using all available CPUs.
     ///
     /// This number of threads is extracted at runtime using the
@@ -110,6 +113,7 @@ impl<B: BufRead, E: FromXml> ThreadedParser<B, E> {
     /// everything in the main thread.
     pub fn with_threads(reader: B, threads: NonZeroUsize) -> Self {
         let threads = threads.get();
+        let mut root = Vec::new();
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
         xml.expand_empty_elements(true);
@@ -118,11 +122,14 @@ impl<B: BufRead, E: FromXml> ThreadedParser<B, E> {
         let (s_text, r_text) = crossbeam_channel::bounded(threads);
         let (s_item, r_item) = crossbeam_channel::bounded(threads);
 
-        // read until we enter the `uniprot` element
+        // read until we enter the root element
         loop {
             buffer.clear();
             match xml.read_event(&mut buffer) {
-                Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break,
+                Ok(Event::Start(ref e)) => {
+                    root.extend(e.local_name());
+                    break;
+                },
                 Err(e) => {
                     s_item
                         .send(Err(Error::from(e)))
@@ -155,13 +162,15 @@ impl<B: BufRead, E: FromXml> ThreadedParser<B, E> {
             consumers,
             reader: xml.into_underlying_reader(),
             state: State::Idle,
+            root,
+            buffer: Vec::new(),
         }
     }
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead> Iterator for ThreadedParser<B> {
-    type Item = Result<Entry, Error>;
+impl<B: BufRead, E: FromXml + Send + 'static> Iterator for ThreadedParser<B, E> {
+    type Item = Result<E, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             // poll for parsed entries to return
@@ -187,30 +196,55 @@ impl<B: BufRead> Iterator for ThreadedParser<B> {
             // depending on the state, do something before polling
             match self.state {
                 State::Started => {
-                    let mut buffer = Vec::new();
-                    buffer.clear();
-                    loop {
-                        match self.reader.read_until(b'>', &mut buffer) {
-                            // if reached EOF, bail out
-                            Ok(0) => {
-                                for _ in 0..self.threads {
-                                    self.s_text.send(None).ok();
-                                }
-                                self.state = State::AtEof;
-                                break;
+                    // read until a new entry is found, or exit
+                    match self.reader.read_until(b'>', &mut self.buffer) {
+                        // we reached EOF, but that's okay, we were not
+                        // reading an entry;
+                        Ok(0) => {
+                            for _ in 0..self.threads {
+                                self.s_text.send(None).ok();
                             }
-                            // if a full entry is found, send it
-                            Ok(_) if buffer.ends_with(&b"</entry>"[..]) => {
-                                self.s_text.send(Some(buffer)).ok();
-                                break;
-                            }
-                            // if an error is encountered, send it and bail out
-                            Err(e) => {
-                                self.state = State::Finished;
-                                return Some(Err(Error::from(e)));
-                            }
-                            _ => (),
+                            self.state = State::AtEof;
                         }
+                        // we found the beginning of an entry, now we
+                        // must read the entire entry until the end.
+                        Ok(n) => {
+                            let i = memchr::memrchr(b'<', &self.buffer).unwrap();
+                            if self.buffer[i..].starts_with(b"<entry") {
+                                self.state = State::Reading;
+                            }
+                        }
+                        // if an error is encountered, send it and bail out
+                        Err(e) => {
+                            self.state = State::Finished;
+                            return Some(Err(Error::from(e)));
+                        }
+                    }
+                }
+                State::Reading => {
+                    // read until the end of the entry.
+                    match self.reader.read_until(b'>', &mut self.buffer) {
+                        // if a full entry is found, send it
+                        Ok(_) if self.buffer.ends_with(&b"</entry>"[..]) => {
+                            self.s_text.send(Some(std::mem::take(&mut self.buffer))).ok();
+                            self.state = State::Started;
+                        }
+                        // if we reach EOF before finding the end of the
+                        // entry, that's an issue, we report an error.
+                        Ok(0) => {
+                            for _ in 0..self.threads {
+                                self.s_text.send(None).ok();
+                            }
+                            self.state = State::AtEof;
+                            return Some(Err(Error::from(XmlError::UnexpectedEof(String::from("entry")))));
+                        }
+                        // if an error is encountered, send it and bail out
+                        Err(e) => {
+                            self.state = State::Finished;
+                            return Some(Err(Error::from(e)));
+                        }
+                        // otherwise just keep iterating.
+                        _ => (),
                     }
                 }
                 State::AtEof => {
@@ -248,10 +282,12 @@ pub struct SequentialParser<B: BufRead, E: FromXml> {
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
     finished: bool,
+    root: Vec<u8>,
 }
 
 impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
     pub fn new(reader: B) -> Self {
+        let mut root = Vec::new();
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
         xml.expand_empty_elements(true);
@@ -260,8 +296,11 @@ impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
         let cache = loop {
             buffer.clear();
             match xml.read_event(&mut buffer) {
-                Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break None,
                 Err(e) => break Some(Err(Error::from(e))),
+                Ok(Event::Start(e)) => {
+                    root.extend(e.local_name());
+                    break None;
+                }
                 Ok(Event::Eof) => {
                     let e = String::from("xml");
                     break Some(Err(Error::from(XmlError::UnexpectedEof(e))));
@@ -275,6 +314,7 @@ impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
             buffer,
             cache,
             finished: false,
+            root,
         }
     }
 }
@@ -305,7 +345,7 @@ impl<B: BufRead, E: FromXml> Iterator for SequentialParser<B, E> {
                     return Some(Err(Error::from(XmlError::UnexpectedEof(e))));
                 }
                 // if end of `uniprot` is reached, return no further item
-                Ok(Event::End(ref e)) if e.local_name() == b"uniprot" => {
+                Ok(Event::End(ref e)) if e.local_name() == &self.root => {
                     self.finished = true;
                     return None;
                 }

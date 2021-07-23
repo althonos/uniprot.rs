@@ -74,7 +74,7 @@ mod tests {
         #[test]
         fn parse_single_entry() {
             let f = std::fs::File::open("tests/uniprot.xml").unwrap();
-            ThreadedParser::new(std::io::BufReader::new(f))
+            ThreadedParser::<_, Entry>::new(std::io::BufReader::new(f))
                 .next()
                 .expect("an entry should be parsed")
                 .expect("the entry should be parsed successfully");
@@ -82,8 +82,8 @@ mod tests {
 
         #[test]
         fn fail_unexpected_eof() {
-            let txt = &b"<entry>"[..];
-            let err = ThreadedParser::new(std::io::Cursor::new(txt))
+            let txt = &b"<uniprot><entry>"[..];
+            let err = ThreadedParser::<_, Entry>::new(std::io::Cursor::new(txt))
                 .next()
                 .expect("should raise an error")
                 .unwrap_err();
