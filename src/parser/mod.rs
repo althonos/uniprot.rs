@@ -80,7 +80,6 @@ pub struct ThreadedParser<B: BufRead, E: FromXml + Send + 'static> {
     consumers: Vec<Consumer<E>>,
     r_item: Receiver<Result<E, Error>>,
     s_text: Sender<Option<Vec<u8>>>,
-    root: Vec<u8>,
     buffer: Vec<u8>,
 }
 
@@ -113,7 +112,6 @@ impl<B: BufRead, E: FromXml + Send + 'static> ThreadedParser<B, E> {
     /// everything in the main thread.
     pub fn with_threads(reader: B, threads: NonZeroUsize) -> Self {
         let threads = threads.get();
-        let mut root = Vec::new();
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
         xml.expand_empty_elements(true);
@@ -126,8 +124,7 @@ impl<B: BufRead, E: FromXml + Send + 'static> ThreadedParser<B, E> {
         loop {
             buffer.clear();
             match xml.read_event(&mut buffer) {
-                Ok(Event::Start(ref e)) => {
-                    root.extend(e.local_name());
+                Ok(Event::Start(_)) => {
                     break;
                 },
                 Err(e) => {
@@ -162,7 +159,6 @@ impl<B: BufRead, E: FromXml + Send + 'static> ThreadedParser<B, E> {
             consumers,
             reader: xml.into_underlying_reader(),
             state: State::Idle,
-            root,
             buffer: Vec::new(),
         }
     }
@@ -208,7 +204,7 @@ impl<B: BufRead, E: FromXml + Send + 'static> Iterator for ThreadedParser<B, E> 
                         }
                         // we found the beginning of an entry, now we
                         // must read the entire entry until the end.
-                        Ok(n) => {
+                        Ok(_) => {
                             let i = memchr::memrchr(b'<', &self.buffer).unwrap();
                             if self.buffer[i..].starts_with(b"<entry") {
                                 self.state = State::Reading;
@@ -286,6 +282,7 @@ pub struct SequentialParser<B: BufRead, E: FromXml> {
 }
 
 impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
+    /// Create a new `SequentialParser` wrapping the given reader.
     pub fn new(reader: B) -> Self {
         let mut root = Vec::new();
         let mut buffer = Vec::new();

@@ -13,13 +13,19 @@
 //! [![Changelog](https://img.shields.io/badge/keep%20a-changelog-8A0707.svg?maxAge=2678400&style=flat-square)](https://github.com/althonos/uniprot.rs/blob/master/CHANGELOG.md)
 //! [![GitHub issues](https://img.shields.io/github/issues/althonos/uniprot.rs.svg?style=flat-square&maxAge=600)](https://github.com/althonos/uniprot.rs/issues)
 //!
-//!
 //! # 🔌 Usage
 //!
-//! The `uniprot::parse` function can be used to obtain an iterator over the entries
-//! of a UniprotKB database in XML format (either SwissProt or TrEMBL). It
-//! will use the [`uniprot::Parser`], which is either [`SequentialParser`]
-//! or [`ThreadedParser`] depending on the compilation features.
+//! All `parse` functions takes a [`BufRead`] implementor as the input.
+//! Additionaly, if compiling with the [`threading`] feature, it will
+//! require the input to be [`Send`] and `'static` as well. They will use
+//! the [`uniprot::Parser`], which is either [`SequentialParser`] or
+//! [`ThreadedParser`] depending on the compilation features.
+//!
+//! ## UniProt
+//!
+//! The [`uniprot::uniprot::parse`] function can be used to obtain an iterator
+//! over the entries of a UniprotKB database in XML format (either SwissProt
+//! or TrEMBL).
 //!
 //! ```rust
 //! extern crate uniprot;
@@ -30,13 +36,28 @@
 //!
 //! for r in uniprot::uniprot::parse(f) {
 //!    let entry = r.unwrap();
-//!    // ... process the Uniprot entry ...
+//!    // ... process the UniProt entry ...
 //! }
 //! ```
 //!
-//! `uniprot::uniprot::parse` takes any [`BufRead`] implementor as an input.
-//! Additionaly, if compiling with the [`threading`] feature, it will require
-//!  the input to be [`Send`] and `'static` as well.
+//! ## UniRef
+//!
+//! The [`uniprot::uniref::parse`] function can be used to obtain an iterator
+//! over the entries of a UniRef database in XML format (UniRef100, UniRef90,
+//! or UniRef50).
+//!
+//! ```rust
+//! extern crate uniprot;
+//!
+//! let f = std::fs::File::open("tests/uniref50.xml")
+//!    .map(std::io::BufReader::new)
+//!    .unwrap();
+//!
+//! for r in uniprot::uniref::parse(f) {
+//!    let entry = r.unwrap();
+//!    // ... process the UniRef entry ...
+//! }
+//! ```
 //!
 //! ## 📦 Decoding Gzip
 //!
@@ -52,7 +73,7 @@
 //! and [`ftp.uniprot.org`], the former being located in Europe while the
 //! latter is in the United States. The `ftp` crate can be used to open
 //! a connection and parse the databases on-the-fly: see the
-//! [`uniprot::parse`] example to see a code snippet.
+//! [`uniprot::uniprot::parse`] example to see a code snippet.
 //!
 //! ## 📧 Downloading from HTTP
 //!
@@ -83,7 +104,6 @@
 //! This library is provided under the open-source
 //! [MIT license](https://choosealicense.com/licenses/mit/).
 //!
-//!
 //! [`http://ftp.ebi.ac.uk`]: http://ftp.ebi.ac.uk
 //! [`ftp.ebi.ac.uk`]: ftp://ftp.ebi.ac.uk
 //! [`ftp.uniprot.org`]: ftp://ftp.uniprot.org
@@ -94,7 +114,8 @@
 //! [`libflate::gzip::Decoder`]: https://docs.rs/libflate/latest/libflate/gzip/struct.Decoder.html
 //! [`BufferedReader`]: https://doc.rust-lang.org/std/io/struct.BufReader.html
 //! [`Entry`]: ./model/struct.Entry.html
-//! [`uniprot::parse`]: ./fn.parse.html
+//! [`uniprot::uniprot::parse`]: ./uniprot/fn.parse.html
+//! [`uniprot::uniref::parse`]: ./uniref/fn.parse.html
 //! [`uniprot::Parser`]: ./type.Parser.html
 //! [`SequentialParser`]: ./parser/struct.SequentialParser.html
 //! [`ThreadedParser`]: ./parser/struct.ThreadedParser.html
@@ -122,3 +143,13 @@ pub mod uniref;
 
 #[doc(inline)]
 pub use self::parser::Parser;
+
+#[doc(hidden)]
+#[deprecated(
+    since="v0.4.0",
+    note = "UniProt code has been moved to the uniprot module, use `uniprot::uniprot::parse` instead"
+)]
+#[inline(always)]
+pub fn parse<B: std::io::BufRead>(reader: B) -> Parser<B, uniprot::model::Entry> {
+    self::uniprot::parse(reader)
+}
