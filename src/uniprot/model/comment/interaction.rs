@@ -8,6 +8,8 @@ use crate::error::Error;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
+use super::super::DbReference;
+
 
 #[derive(Debug, Clone)]
 pub struct Interaction {
@@ -21,6 +23,7 @@ pub struct Interactant {
     pub interactant_id: String,
     pub id: Option<String>,
     pub label: Option<String>,
+    pub db_reference: Vec<DbReference>,
 }
 
 impl Interactant {
@@ -29,6 +32,7 @@ impl Interactant {
             interactant_id,
             id: Default::default(),
             label: Default::default(),
+            db_reference: Vec::new(),
         }
     }
 }
@@ -59,6 +63,9 @@ impl FromXml for Interactant {
                 if interactant.label.replace(label).is_some() {
                     return Err(Error::DuplicateElement("label", "interaction"));
                 }
+            },
+            e @ b"dbReference" => {
+                interactant.db_reference.push(FromXml::from_xml(&e, reader, buffer)?);
             }
         }
 
