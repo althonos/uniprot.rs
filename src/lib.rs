@@ -148,15 +148,12 @@ pub mod uniref;
 pub mod uniparc;
 mod common;
 
-#[doc(inline)]
-pub use self::parser::Parser;
-
 #[doc(hidden)]
 #[deprecated(
     since="v0.4.0",
     note = "UniProt code has been moved to the `uniprot` module, use `uniprot::uniprot::parse` instead"
 )]
 #[inline(always)]
-pub fn parse<B: std::io::BufRead>(reader: B) -> Parser<B, self::uniprot::UniProt> {
+pub fn parse<B: std::io::BufRead>(reader: B) -> self::uniprot::Parser<B> {
     self::uniprot::parse(reader)
 }

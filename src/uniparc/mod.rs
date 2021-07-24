@@ -47,7 +47,7 @@ mod tests {
         let entries = super::parse(std::io::BufReader::new(f))
             .collect::<Result<Vec<_>, _>>()
             .expect("entries should parse successfully");
-        assert_eq!(entries.len(), 15);
+        assert_eq!(entries.len(), 64);
     }
 
     mod sequential {
