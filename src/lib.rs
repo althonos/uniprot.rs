@@ -127,7 +127,6 @@
 
 #![allow(unused_imports)]
 
-extern crate bytes;
 extern crate chrono;
 #[cfg(feature = "threading")]
 extern crate crossbeam_channel;

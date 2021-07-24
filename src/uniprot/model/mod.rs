@@ -36,7 +36,6 @@ use std::collections::HashSet;
 use std::io::BufRead;
 use std::str::FromStr;
 
-use bytes::Bytes;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 

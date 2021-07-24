@@ -10,7 +10,6 @@ use std::thread::JoinHandle;
 use std::thread::Result as ThreadResult;
 use std::time::Duration;
 
-use bytes::Bytes;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::Sender;

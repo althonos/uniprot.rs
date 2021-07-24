@@ -36,7 +36,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use bytes::Bytes;
 #[cfg(feature = "threading")]
 use crossbeam_channel::Receiver;
 #[cfg(feature = "threading")]
