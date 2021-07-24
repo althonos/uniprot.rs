@@ -34,7 +34,10 @@ pub use crate::common::date::Date;
 
 use std::collections::HashSet;
 use std::io::BufRead;
+use std::iter::FromIterator;
 use std::str::FromStr;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
@@ -43,6 +46,7 @@ use crate::error::Error;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::FromXml;
+use crate::parser::UniprotDatabase;
 
 use self::comment::Comment;
 use self::gene::Gene;
@@ -51,6 +55,8 @@ use self::organism::Organism;
 use self::protein::Protein;
 use self::protein::ProteinExistence;
 use self::reference::Reference;
+
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone)]
 /// A UniProtKB entry.
@@ -180,6 +186,57 @@ impl FromXml for Entry {
 
         Ok(entry)
     }
+}
+
+// ---------------------------------------------------------------------------
+
+/// A UniProtKB database.
+#[derive(Debug, Clone)]
+pub struct UniProt {
+    entries: Vec<Entry>
+}
+
+impl UniProt {
+    /// Create a new UniRef database with the given entries.
+    pub fn new(entries: Vec<Entry>) -> Self {
+        Self { entries }
+    }
+}
+
+impl Deref for UniProt {
+    type Target = Vec<Entry>;
+    fn deref(&self) -> &Vec<Entry> {
+        &self.entries
+    }
+}
+
+impl DerefMut for UniProt {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entries
+    }
+}
+
+impl FromIterator<Entry> for UniProt {
+    fn from_iter<T: IntoIterator<Item=Entry>>(iter: T) -> Self {
+        Self::new(iter.into_iter().collect())
+    }
+}
+
+impl From<Vec<Entry>> for UniProt {
+    fn from(entries: Vec<Entry>) -> Self {
+        Self { entries }
+    }
+}
+
+impl From<UniProt> for Vec<Entry> {
+    fn from(uniprot: UniProt) -> Self {
+        uniprot.entries
+    }
+}
+
+impl UniprotDatabase for UniProt {
+    type Entry = Entry;
+    const ROOTS: &'static [&'static [u8]] = &[ b"uniprot"];
 }
 
 // ---------------------------------------------------------------------------

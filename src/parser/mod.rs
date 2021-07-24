@@ -72,18 +72,18 @@ enum State {
 
 #[cfg(feature = "threading")]
 /// A parser for the Uniprot XML formats that parses entries in parallel.
-pub struct ThreadedParser<B: BufRead, E: FromXml + Send + 'static> {
+pub struct ThreadedParser<B: BufRead, D: UniprotDatabase> {
     reader: B,
     state: State,
     threads: usize,
-    consumers: Vec<Consumer<E>>,
-    r_item: Receiver<Result<E, Error>>,
+    consumers: Vec<Consumer<D>>,
+    r_item: Receiver<Result<D::Entry, Error>>,
     s_text: Sender<Option<Vec<u8>>>,
     buffer: Vec<u8>,
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead, E: FromXml + Send + 'static> ThreadedParser<B, E> {
+impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
     /// Create a new `ThreadedParser` using all available CPUs.
     ///
     /// This number of threads is extracted at runtime using the
@@ -123,7 +123,14 @@ impl<B: BufRead, E: FromXml + Send + 'static> ThreadedParser<B, E> {
         loop {
             buffer.clear();
             match xml.read_event(&mut buffer) {
-                Ok(Event::Start(_)) => {
+                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name()) => {
+                    break;
+                }
+                Ok(Event::Start(e)) => {
+                    let x = String::from_utf8_lossy(e.local_name()).into_owned();
+                    s_item
+                        .send(Err(Error::UnexpectedRoot(x)))
+                        .expect("channel should still be connected");
                     break;
                 },
                 Err(e) => {
@@ -164,8 +171,8 @@ impl<B: BufRead, E: FromXml + Send + 'static> ThreadedParser<B, E> {
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead, E: FromXml + Send + 'static> Iterator for ThreadedParser<B, E> {
-    type Item = Result<E, Error>;
+impl<B: BufRead, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
+    type Item = Result<D::Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             // poll for parsed entries to return
@@ -267,12 +274,12 @@ impl<B: BufRead, E: FromXml + Send + 'static> Iterator for ThreadedParser<B, E> 
 
 #[cfg(feature = "threading")]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B, E> = ThreadedParser<B, E>;
+pub type Parser<B, D> = ThreadedParser<B, D>;
 
 // --------------------------------------------------------------------------
 
 /// A parser for the Uniprot XML formats that parses entries sequentially.
-pub struct SequentialParser<B: BufRead, E: FromXml> {
+pub struct SequentialParser<B: BufRead, D: UniprotDatabase> {
     xml: Reader<B>,
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
@@ -280,7 +287,7 @@ pub struct SequentialParser<B: BufRead, E: FromXml> {
     root: Vec<u8>,
 }
 
-impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
+impl<B: BufRead, D: UniprotDatabase> SequentialParser<B, D> {
     /// Create a new `SequentialParser` wrapping the given reader.
     pub fn new(reader: B) -> Self {
         let mut root = Vec::new();
@@ -293,9 +300,13 @@ impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
             buffer.clear();
             match xml.read_event(&mut buffer) {
                 Err(e) => break Some(Err(Error::from(e))),
-                Ok(Event::Start(e)) => {
+                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name()) => {
                     root.extend(e.local_name());
                     break None;
+                }
+                Ok(Event::Start(e)) => {
+                    let x = String::from_utf8_lossy(e.local_name()).into_owned();
+                    break Some(Err(Error::UnexpectedRoot(x)));
                 }
                 Ok(Event::Eof) => {
                     let e = String::from("xml");
@@ -315,8 +326,8 @@ impl<B: BufRead, E: FromXml> SequentialParser<B, E> {
     }
 }
 
-impl<B: BufRead, E: FromXml> Iterator for SequentialParser<B, E> {
-    type Item = Result<E, Error>;
+impl<B: BufRead, D: UniprotDatabase> Iterator for SequentialParser<B, D> {
+    type Item = Result<D::Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         // return cached item if any
         if let Some(item) = self.cache.take() {
@@ -347,7 +358,7 @@ impl<B: BufRead, E: FromXml> Iterator for SequentialParser<B, E> {
                 }
                 // create a new Entry
                 Ok(Event::Start(ref e)) if e.local_name() == b"entry" => {
-                    return Some(E::from_xml(
+                    return Some(D::Entry::from_xml(
                         &e.clone().into_owned(),
                         &mut self.xml,
                         &mut self.buffer,
@@ -361,7 +372,7 @@ impl<B: BufRead, E: FromXml> Iterator for SequentialParser<B, E> {
 
 #[cfg(not(feature = "threading"))]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B, E> = SequentialParser<B, E>;
+pub type Parser<B, D> = SequentialParser<B, D>;
 
 // ---------------------------------------------------------------------------
 
@@ -372,4 +383,10 @@ pub trait FromXml: Sized {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error>;
+}
+
+/// A trait for UniProt databases.
+pub trait UniprotDatabase {
+    type Entry: FromXml + Send + 'static;
+    const ROOTS: &'static [&'static [u8]];
 }

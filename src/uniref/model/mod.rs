@@ -16,11 +16,17 @@ pub use crate::common::date::Date;
 pub use crate::common::property::Property;
 
 use std::io::BufRead;
+use std::iter::FromIterator;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use crate::parser::utils::decode_attribute;
 use crate::parser::FromXml;
+use crate::parser::UniprotDatabase;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 use crate::error::Error;
+
+// ---------------------------------------------------------------------------
 
 /// A UniRef entry.
 #[derive(Debug, Clone)]
@@ -79,4 +85,55 @@ impl FromXml for Entry {
             members,
         })
     }
+}
+
+// ---------------------------------------------------------------------------
+
+/// A UniRef database.
+#[derive(Debug, Clone)]
+pub struct UniRef {
+    entries: Vec<Entry>
+}
+
+impl UniRef {
+    /// Create a new UniRef database with the given entries.
+    pub fn new(entries: Vec<Entry>) -> Self {
+        Self { entries }
+    }
+}
+
+impl Deref for UniRef {
+    type Target = Vec<Entry>;
+    fn deref(&self) -> &Vec<Entry> {
+        &self.entries
+    }
+}
+
+impl DerefMut for UniRef {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entries
+    }
+}
+
+impl FromIterator<Entry> for UniRef {
+    fn from_iter<T: IntoIterator<Item=Entry>>(iter: T) -> Self {
+        Self::new(iter.into_iter().collect())
+    }
+}
+
+impl From<Vec<Entry>> for UniRef {
+    fn from(entries: Vec<Entry>) -> Self {
+        Self { entries }
+    }
+}
+
+impl From<UniRef> for Vec<Entry> {
+    fn from(uniref: UniRef) -> Self {
+        uniref.entries
+    }
+}
+
+impl UniprotDatabase for UniRef {
+    type Entry = Entry;
+    const ROOTS: &'static [&'static [u8]] = &[ b"UniRef", b"UniRef50", b"UniRef90", b"UniRef100"];
 }

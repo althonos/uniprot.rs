@@ -156,6 +156,6 @@ pub use self::parser::Parser;
     note = "UniProt code has been moved to the `uniprot` module, use `uniprot::uniprot::parse` instead"
 )]
 #[inline(always)]
-pub fn parse<B: std::io::BufRead>(reader: B) -> Parser<B, self::uniprot::Entry> {
+pub fn parse<B: std::io::BufRead>(reader: B) -> Parser<B, self::uniprot::UniProt> {
     self::uniprot::parse(reader)
 }

@@ -43,6 +43,9 @@ pub enum Error {
     #[error("invalid value for attribute `{0}` in `{1}`")]
     /// A value could not be parsed successfully.
     InvalidValue(&'static str, &'static str, #[source] InvalidValue),
+    /// Unexpected root element.
+    #[error("unexpected root element `{0}`")]
+    UnexpectedRoot(String),
     #[cfg(feature = "threading")]
     #[error("unexpected threading channel disconnection")]
     /// A communication channel between threads was disconnected early.

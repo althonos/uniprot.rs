@@ -8,14 +8,14 @@ mod model;
 pub use self::model::*;
 
 /// The sequential parser type for UniProt entries.
-pub type SequentialParser<B> = super::parser::SequentialParser<B, Entry>;
+pub type SequentialParser<B> = super::parser::SequentialParser<B, UniProt>;
 
 #[cfg(feature = "threading")]
 /// The threaded parser type for UniProt entries.
-pub type ThreadedParser<B> = super::parser::ThreadedParser<B, Entry>;
+pub type ThreadedParser<B> = super::parser::ThreadedParser<B, UniProt>;
 
 /// The parser type for UniProt entries.
-pub type Parser<B> = super::parser::Parser<B, Entry>;
+pub type Parser<B> = super::parser::Parser<B, UniProt>;
 
 /// Parse a Uniprot database XML file.
 ///
@@ -52,12 +52,11 @@ mod tests {
 
     mod sequential {
         use super::*;
-        use crate::parser::SequentialParser;
 
         #[test]
         fn parse_single_entry() {
             let f = std::fs::File::open("tests/uniprot.xml").unwrap();
-            SequentialParser::<_, Entry>::new(std::io::BufReader::new(f))
+            SequentialParser::new(std::io::BufReader::new(f))
                 .next()
                 .expect("an entry should be parsed")
                 .expect("the entry should be parsed successfully");
@@ -65,14 +64,26 @@ mod tests {
 
         #[test]
         fn fail_unexpected_eof() {
-            let txt = &b"<entry>"[..];
-            let err = SequentialParser::<_, Entry>::new(std::io::Cursor::new(txt))
+            let txt = &b"<uniprot><entry dataset=\"Swiss-Prot\" created=\"2011-06-28\" modified=\"2019-12-11\" version=\"39\">"[..];
+            let err = SequentialParser::new(std::io::Cursor::new(txt))
                 .next()
                 .expect("should raise an error")
                 .unwrap_err();
-
             match err {
                 Error::Xml(XmlError::UnexpectedEof(_)) => (),
+                other => panic!("unexpected error: {:?}", other),
+            }
+        }
+
+        #[test]
+        fn fail_unexpected_root() {
+            let txt = &b"<something><entry>"[..];
+            let err = SequentialParser::new(std::io::Cursor::new(txt))
+                .next()
+                .expect("should raise an error")
+                .unwrap_err();
+            match err {
+                Error::UnexpectedRoot(r) => assert_eq!(r, "something"),
                 other => panic!("unexpected error: {:?}", other),
             }
         }
@@ -81,12 +92,11 @@ mod tests {
     #[cfg(feature = "threading")]
     mod threaded {
         use super::*;
-        use crate::parser::ThreadedParser;
 
         #[test]
         fn parse_single_entry() {
             let f = std::fs::File::open("tests/uniprot.xml").unwrap();
-            ThreadedParser::<_, Entry>::new(std::io::BufReader::new(f))
+            ThreadedParser::new(std::io::BufReader::new(f))
                 .next()
                 .expect("an entry should be parsed")
                 .expect("the entry should be parsed successfully");
@@ -94,14 +104,26 @@ mod tests {
 
         #[test]
         fn fail_unexpected_eof() {
-            let txt = &b"<uniprot><entry>"[..];
-            let err = ThreadedParser::<_, Entry>::new(std::io::Cursor::new(txt))
+            let txt = &b"<uniprot><entry dataset=\"Swiss-Prot\" created=\"2011-06-28\" modified=\"2019-12-11\" version=\"39\">"[..];
+            let err = ThreadedParser::new(std::io::Cursor::new(txt))
                 .next()
                 .expect("should raise an error")
                 .unwrap_err();
-
             match err {
                 Error::Xml(XmlError::UnexpectedEof(_)) => (),
+                other => panic!("unexpected error: {:?}", other),
+            }
+        }
+
+        #[test]
+        fn fail_unexpected_root() {
+            let txt = &b"<something><entry>"[..];
+            let err = ThreadedParser::new(std::io::Cursor::new(txt))
+                .next()
+                .expect("should raise an error")
+                .unwrap_err();
+            match err {
+                Error::UnexpectedRoot(r) => assert_eq!(r, "something"),
                 other => panic!("unexpected error: {:?}", other),
             }
         }

@@ -19,19 +19,20 @@ use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::FromXml;
+use super::FromXml;
+use super::UniprotDatabase;
 
-pub struct Consumer<E: FromXml + Send + 'static> {
+pub struct Consumer<D: UniprotDatabase> {
     r_text: Receiver<Option<Vec<u8>>>,
-    s_item: Sender<Result<E, Error>>,
+    s_item: Sender<Result<D::Entry, Error>>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl<E: FromXml + Send + 'static> Consumer<E> {
+impl<D: UniprotDatabase> Consumer<D> {
     pub(super) fn new(
         r_text: Receiver<Option<Vec<u8>>>,
-        s_item: Sender<Result<E, Error>>,
+        s_item: Sender<Result<D::Entry, Error>>,
     ) -> Self {
         Self {
             r_text,
@@ -82,7 +83,7 @@ impl<E: FromXml + Send + 'static> Consumer<E> {
                         return;
                     }
                     Ok(Event::Start(s)) if s.local_name() == b"entry" => {
-                        let e = E::from_xml(&s.into_owned(), &mut xml, &mut buffer);
+                        let e = D::Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
                         s_item.send(e).ok();
                     }
                     e => unreachable!("unexpected XML event: {:?}", e),
