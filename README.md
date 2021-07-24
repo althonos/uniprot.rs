@@ -17,7 +17,7 @@
 ## 🔌 Usage
 
 The `uniprot::uniprot::parse` function can be used to obtain an iterator over
-the entries (`of a UniprotKB database in XML format (either SwissProt or TrEMBL).
+the entries of a UniprotKB database in XML format (either SwissProt or TrEMBL).
 
 ```rust
 extern crate uniprot;
@@ -32,6 +32,9 @@ for r in uniprot::uniprot::parse(f) {
 }
 ```
 
+XML files for UniRef and UniParc can also be parsed, with `uniprot::uniref::parse`
+and `uniprot::uniparc::parse`, respectively.
+
 Any [`BufRead`](https://doc.rust-lang.org/stable/std/io/trait.BufRead.html)
 implementor can be used as an input, so the database files can be streamed
 directly from their [online location](https://www.uniprot.org/downloads) with
@@ -40,7 +43,6 @@ using the [`ftp`](https://docs.rs/ftp) library.
 
 See the online documentation at [`docs.rs`](https://docs.rs/uniprot) for more
 examples, and some details about the different features available.
-
 
 ## 📝 Features
 

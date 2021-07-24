@@ -26,8 +26,8 @@
 //! ### UniProt
 //!
 //! The [`uniprot::uniprot::parse`] function can be used to obtain an iterator
-//! over the entries of a UniprotKB database in XML format (either [SwissProt]
-//! or [TrEMBL]).
+//! over the entries ([`uniprot::uniprot::Entry`]) of a UniprotKB database in
+//! XML format (either [SwissProt] or [TrEMBL]).
 //!
 //! ```rust
 //! extern crate uniprot;
@@ -45,21 +45,14 @@
 //! ### UniRef
 //!
 //! The [`uniprot::uniref::parse`] function can be used to obtain an iterator
-//! over the entries of a UniRef database in XML format ([UniRef100], [UniRef90],
-//! or [UniRef50]).
+//! over the entries ([`uniprot::uniref::Entry`]) of a UniRef database in XML
+//! format ([UniRef100], [UniRef90], or [UniRef50]).
 //!
-//! ```rust
-//! extern crate uniprot;
+//! ### UniParc
 //!
-//! let f = std::fs::File::open("tests/uniref50.xml")
-//!    .map(std::io::BufReader::new)
-//!    .unwrap();
-//!
-//! for r in uniprot::uniref::parse(f) {
-//!    let entry = r.unwrap();
-//!    // ... process the UniRef entry ...
-//! }
-//! ```
+//! The [`uniprot::uniparc::parse`] function can be used to obtain an iterator
+//! over the entries ([`uniprot::uniparc::Entry`]) of a UniParc database in
+//! XML format.
 //!
 //! ## 📦 Decoding Gzip
 //!
@@ -116,6 +109,10 @@
 //! [`Entry`]: ./model/struct.Entry.html
 //! [`uniprot::uniprot::parse`]: ./uniprot/fn.parse.html
 //! [`uniprot::uniref::parse`]: ./uniref/fn.parse.html
+//! [`uniprot::uniparc::parse`]: ./uniparc/fn.parse.html
+//! [`uniprot::uniprot::Entry`]: ./uniprot/struct.Entry.html
+//! [`uniprot::uniref::Entry`]: ./uniref/struct.Entry.html
+//! [`uniprot::uniparc::Entry`]: ./uniparc/struct.Entry.html
 //! [`uniprot::Parser`]: ./type.Parser.html
 //! [`SequentialParser`]: ./parser/struct.SequentialParser.html
 //! [`ThreadedParser`]: ./parser/struct.ThreadedParser.html
