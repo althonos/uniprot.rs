@@ -1,4 +1,4 @@
-//! UniprotKB XML parser implementation.
+//! XML parser implementation.
 //!
 //! This module provides two parsers, one using multithreading to consume
 //! the input, and another one performing everything in the main thread.
@@ -8,7 +8,7 @@
 //!
 //! Some benchmarks results on an i7-8550U CPU running at 1.80GHz, where the
 //! baseline only collect [`quick-xml`] events without deserializing them into
-//! the appropriate owned types from [`::model`]:
+//! the appropriate owned types from [`::uniprot`]:
 //!
 //! ```text
 //! test bench_baseline          ... bench:  33,280,101 ns/iter (+/- 1,154,274) = 119 MB/s
@@ -16,7 +16,7 @@
 //! test bench_threaded_parser   ... bench:  27,767,008 ns/iter (+/- 6,527,132) = 143 MB/s
 //! ```
 //!
-//! [`::model`]: ../model/index.html
+//! [`::uniprot`]: ../uniprot/index.html
 //! [`quick-xml`]: https://docs.rs/quick-xml
 
 pub(crate) mod utils;
@@ -36,7 +36,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use bytes::Bytes;
 #[cfg(feature = "threading")]
 use crossbeam_channel::Receiver;
 #[cfg(feature = "threading")]
@@ -53,7 +52,6 @@ use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
 use super::error::Error;
-use super::model::*;
 
 #[cfg(feature = "threading")]
 use self::consumer::Consumer;
@@ -61,29 +59,31 @@ use self::consumer::Consumer;
 // ---------------------------------------------------------------------------
 
 #[cfg(feature = "threading")]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 /// The state of the `ThreadedParser`.
 enum State {
     Idle,
     Started,
+    Reading,
     AtEof,
     Waiting,
     Finished,
 }
 
 #[cfg(feature = "threading")]
-/// A parser for the Uniprot XML format that parses entries in parallel.
-pub struct ThreadedParser<B: BufRead> {
+/// A parser for the Uniprot XML formats that parses entries in parallel.
+pub struct ThreadedParser<B: BufRead, D: UniprotDatabase> {
     reader: B,
     state: State,
     threads: usize,
-    consumers: Vec<Consumer>,
-    r_item: Receiver<Result<Entry, Error>>,
+    consumers: Vec<Consumer<D>>,
+    r_item: Receiver<Result<D::Entry, Error>>,
     s_text: Sender<Option<Vec<u8>>>,
+    buffer: Vec<u8>,
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead> ThreadedParser<B> {
+impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
     /// Create a new `ThreadedParser` using all available CPUs.
     ///
     /// This number of threads is extracted at runtime using the
@@ -119,11 +119,20 @@ impl<B: BufRead> ThreadedParser<B> {
         let (s_text, r_text) = crossbeam_channel::bounded(threads);
         let (s_item, r_item) = crossbeam_channel::bounded(threads);
 
-        // read until we enter the `uniprot` element
+        // read until we enter the root element
         loop {
             buffer.clear();
             match xml.read_event(&mut buffer) {
-                Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break,
+                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name()) => {
+                    break;
+                }
+                Ok(Event::Start(e)) => {
+                    let x = String::from_utf8_lossy(e.local_name()).into_owned();
+                    s_item
+                        .send(Err(Error::UnexpectedRoot(x)))
+                        .expect("channel should still be connected");
+                    break;
+                }
                 Err(e) => {
                     s_item
                         .send(Err(Error::from(e)))
@@ -156,13 +165,14 @@ impl<B: BufRead> ThreadedParser<B> {
             consumers,
             reader: xml.into_underlying_reader(),
             state: State::Idle,
+            buffer: Vec::new(),
         }
     }
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead> Iterator for ThreadedParser<B> {
-    type Item = Result<Entry, Error>;
+impl<B: BufRead, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
+    type Item = Result<D::Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             // poll for parsed entries to return
@@ -188,30 +198,59 @@ impl<B: BufRead> Iterator for ThreadedParser<B> {
             // depending on the state, do something before polling
             match self.state {
                 State::Started => {
-                    let mut buffer = Vec::new();
-                    buffer.clear();
-                    loop {
-                        match self.reader.read_until(b'>', &mut buffer) {
-                            // if reached EOF, bail out
-                            Ok(0) => {
-                                for _ in 0..self.threads {
-                                    self.s_text.send(None).ok();
-                                }
-                                self.state = State::AtEof;
-                                break;
+                    // read until a new entry is found, or exit
+                    match self.reader.read_until(b'>', &mut self.buffer) {
+                        // we reached EOF, but that's okay, we were not
+                        // reading an entry;
+                        Ok(0) => {
+                            for _ in 0..self.threads {
+                                self.s_text.send(None).ok();
                             }
-                            // if a full entry is found, send it
-                            Ok(_) if buffer.ends_with(&b"</entry>"[..]) => {
-                                self.s_text.send(Some(buffer)).ok();
-                                break;
-                            }
-                            // if an error is encountered, send it and bail out
-                            Err(e) => {
-                                self.state = State::Finished;
-                                return Some(Err(Error::from(e)));
-                            }
-                            _ => (),
+                            self.state = State::AtEof;
                         }
+                        // we found the beginning of an entry, now we
+                        // must read the entire entry until the end.
+                        Ok(_) => {
+                            let i = memchr::memrchr(b'<', &self.buffer).unwrap();
+                            if self.buffer[i..].starts_with(b"<entry") {
+                                self.state = State::Reading;
+                            }
+                        }
+                        // if an error is encountered, send it and bail out
+                        Err(e) => {
+                            self.state = State::Finished;
+                            return Some(Err(Error::from(e)));
+                        }
+                    }
+                }
+                State::Reading => {
+                    // read until the end of the entry.
+                    match self.reader.read_until(b'>', &mut self.buffer) {
+                        // if a full entry is found, send it
+                        Ok(_) if self.buffer.ends_with(&b"</entry>"[..]) => {
+                            self.s_text
+                                .send(Some(std::mem::take(&mut self.buffer)))
+                                .ok();
+                            self.state = State::Started;
+                        }
+                        // if we reach EOF before finding the end of the
+                        // entry, that's an issue, we report an error.
+                        Ok(0) => {
+                            for _ in 0..self.threads {
+                                self.s_text.send(None).ok();
+                            }
+                            self.state = State::AtEof;
+                            return Some(Err(Error::from(XmlError::UnexpectedEof(String::from(
+                                "entry",
+                            )))));
+                        }
+                        // if an error is encountered, send it and bail out
+                        Err(e) => {
+                            self.state = State::Finished;
+                            return Some(Err(Error::from(e)));
+                        }
+                        // otherwise just keep iterating.
+                        _ => (),
                     }
                 }
                 State::AtEof => {
@@ -239,20 +278,23 @@ impl<B: BufRead> Iterator for ThreadedParser<B> {
 
 #[cfg(feature = "threading")]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B> = ThreadedParser<B>;
+pub type Parser<B, D> = ThreadedParser<B, D>;
 
 // --------------------------------------------------------------------------
 
-/// A parser for the Uniprot XML format that  parses entries sequentially.
-pub struct SequentialParser<B: BufRead> {
+/// A parser for the Uniprot XML formats that parses entries sequentially.
+pub struct SequentialParser<B: BufRead, D: UniprotDatabase> {
     xml: Reader<B>,
     buffer: Vec<u8>,
     cache: Option<<Self as Iterator>::Item>,
     finished: bool,
+    root: Vec<u8>,
 }
 
-impl<B: BufRead> SequentialParser<B> {
+impl<B: BufRead, D: UniprotDatabase> SequentialParser<B, D> {
+    /// Create a new `SequentialParser` wrapping the given reader.
     pub fn new(reader: B) -> Self {
+        let mut root = Vec::new();
         let mut buffer = Vec::new();
         let mut xml = Reader::from_reader(reader);
         xml.expand_empty_elements(true);
@@ -261,8 +303,15 @@ impl<B: BufRead> SequentialParser<B> {
         let cache = loop {
             buffer.clear();
             match xml.read_event(&mut buffer) {
-                Ok(Event::Start(ref e)) if e.local_name() == b"uniprot" => break None,
                 Err(e) => break Some(Err(Error::from(e))),
+                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name()) => {
+                    root.extend(e.local_name());
+                    break None;
+                }
+                Ok(Event::Start(e)) => {
+                    let x = String::from_utf8_lossy(e.local_name()).into_owned();
+                    break Some(Err(Error::UnexpectedRoot(x)));
+                }
                 Ok(Event::Eof) => {
                     let e = String::from("xml");
                     break Some(Err(Error::from(XmlError::UnexpectedEof(e))));
@@ -276,12 +325,13 @@ impl<B: BufRead> SequentialParser<B> {
             buffer,
             cache,
             finished: false,
+            root,
         }
     }
 }
 
-impl<B: BufRead> Iterator for SequentialParser<B> {
-    type Item = Result<Entry, Error>;
+impl<B: BufRead, D: UniprotDatabase> Iterator for SequentialParser<B, D> {
+    type Item = Result<D::Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         // return cached item if any
         if let Some(item) = self.cache.take() {
@@ -306,13 +356,13 @@ impl<B: BufRead> Iterator for SequentialParser<B> {
                     return Some(Err(Error::from(XmlError::UnexpectedEof(e))));
                 }
                 // if end of `uniprot` is reached, return no further item
-                Ok(Event::End(ref e)) if e.local_name() == b"uniprot" => {
+                Ok(Event::End(ref e)) if e.local_name() == &self.root => {
                     self.finished = true;
                     return None;
                 }
                 // create a new Entry
                 Ok(Event::Start(ref e)) if e.local_name() == b"entry" => {
-                    return Some(Entry::from_xml(
+                    return Some(D::Entry::from_xml(
                         &e.clone().into_owned(),
                         &mut self.xml,
                         &mut self.buffer,
@@ -326,14 +376,21 @@ impl<B: BufRead> Iterator for SequentialParser<B> {
 
 #[cfg(not(feature = "threading"))]
 /// The parser type for the crate, used by `uniprot::parse`.
-pub type Parser<B> = SequentialParser<B>;
+pub type Parser<B, D> = SequentialParser<B, D>;
 
 // ---------------------------------------------------------------------------
 
-pub(crate) trait FromXml: Sized {
+/// A trait for types that can be parsed from an XML element.
+pub trait FromXml: Sized {
     fn from_xml<B: BufRead>(
         event: &BytesStart,
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error>;
+}
+
+/// A trait for UniProt databases.
+pub trait UniprotDatabase {
+    type Entry: FromXml + Send + 'static;
+    const ROOTS: &'static [&'static [u8]];
 }

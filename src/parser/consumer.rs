@@ -10,7 +10,6 @@ use std::thread::JoinHandle;
 use std::thread::Result as ThreadResult;
 use std::time::Duration;
 
-use bytes::Bytes;
 use crossbeam_channel::Receiver;
 use crossbeam_channel::RecvTimeoutError;
 use crossbeam_channel::Sender;
@@ -19,22 +18,21 @@ use quick_xml::events::Event;
 use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
+use super::FromXml;
+use super::UniprotDatabase;
 use crate::error::Error;
-use crate::model::Dataset;
-use crate::model::Entry;
-use crate::parser::FromXml;
 
-pub struct Consumer {
+pub struct Consumer<D: UniprotDatabase> {
     r_text: Receiver<Option<Vec<u8>>>,
-    s_item: Sender<Result<Entry, Error>>,
+    s_item: Sender<Result<D::Entry, Error>>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
 
-impl Consumer {
+impl<D: UniprotDatabase> Consumer<D> {
     pub(super) fn new(
         r_text: Receiver<Option<Vec<u8>>>,
-        s_item: Sender<Result<Entry, Error>>,
+        s_item: Sender<Result<D::Entry, Error>>,
     ) -> Self {
         Self {
             r_text,
@@ -85,10 +83,10 @@ impl Consumer {
                         return;
                     }
                     Ok(Event::Start(s)) if s.local_name() == b"entry" => {
-                        let e = Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
+                        let e = D::Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
                         s_item.send(e).ok();
                     }
-                    _ => unreachable!("unexpected XML event"),
+                    e => unreachable!("unexpected XML event: {:?}", e),
                 }
 
                 // clear the event buffer
