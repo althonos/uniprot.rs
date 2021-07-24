@@ -42,6 +42,7 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::decode_attribute;
 use crate::parser::FromXml;
 
 use self::comment::Comment;
@@ -125,8 +126,11 @@ impl FromXml for Entry {
                 ))
             }
         };
-
         let mut entry = Entry::new(dataset);
+
+        entry.modified = decode_attribute(event, reader, "modified", "entry")?;
+        entry.created = decode_attribute(event, reader, "created", "entry")?;
+        entry.version = decode_attribute(event, reader, "version", "entry")?;
         parse_inner! {event, reader, buffer,
             b"accession" => {
                 entry.accessions.push(reader.read_text(b"accession", buffer)?);
