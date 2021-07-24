@@ -5,15 +5,14 @@
 //!
 //! [UniRef XML schema]: https://www.uniprot.org/docs/uniref.xsd
 
-mod date;
 mod member;
 mod reference;
 mod sequence;
 
-pub use self::date::NaiveDate;
 pub use self::member::Member;
 pub use self::reference::Reference;
 pub use self::sequence::Sequence;
+pub use crate::common::date::Date;
 pub use crate::common::property::Property;
 
 use std::io::BufRead;
@@ -27,7 +26,7 @@ use crate::error::Error;
 #[derive(Debug, Clone)]
 pub struct Entry {
     pub id: String,
-    pub updated: NaiveDate,
+    pub updated: Date,
     pub name: String,
     pub properties: Vec<Property>,
     pub representative_member: Member,

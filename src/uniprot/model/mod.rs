@@ -30,6 +30,7 @@ pub use self::molecule::Molecule;
 pub use self::sequence::Sequence;
 pub use self::sequence::FragmentType;
 pub use crate::common::property::Property;
+pub use crate::common::date::Date;
 
 use std::collections::HashSet;
 use std::io::BufRead;
@@ -56,10 +57,9 @@ use self::reference::Reference;
 pub struct Entry {
     // attributes
     pub dataset: Dataset,
-    // created: NaiveDate,
-    // modified: NaiveDate,
-    // version: usize,
-
+    pub created: Date,
+    pub modified: Date,
+    pub version: usize,
     // fields
     pub accessions: Vec<String>, // minOccurs = 1
     pub names: Vec<String>,      // minOccurs = 1
@@ -82,6 +82,9 @@ impl Entry {
     pub fn new(dataset: Dataset) -> Self {
         Entry {
             dataset,
+            created: Default::default(),
+            modified: Default::default(),
+            version: 1,
             accessions: Default::default(),
             names: Default::default(),
             protein: Default::default(),

@@ -10,6 +10,7 @@ use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
+use super::Date;
 
 #[derive(Debug, Default, Clone)]
 /// The sequence of a protein.
@@ -18,7 +19,7 @@ pub struct Sequence {
     pub length: usize,
     pub mass: usize,
     pub checksum: u64,
-    // modified: NaiveDate,
+    pub modified: Date,
     pub version: usize,
     pub precursor: Option<bool>,
     pub fragment: Option<FragmentType>,
@@ -36,6 +37,7 @@ impl FromXml for Sequence {
         let length = decode_attribute(event, reader, "length", "sequence")?;
         let mass = decode_attribute(event, reader, "mass", "sequence")?;
         let version = decode_attribute(event, reader, "version", "sequence")?;
+        let modified = decode_attribute(event, reader, "modified", "sequence")?;
         // let modified = TODO
         let precursor = extract_attribute(event, "precursor")?
             .map(|x| x.unescape_and_decode_value(reader))
@@ -60,6 +62,7 @@ impl FromXml for Sequence {
             length,
             mass,
             checksum,
+            modified,
             version,
             precursor,
             fragment,
