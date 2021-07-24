@@ -56,7 +56,7 @@ impl FromXml for Entry {
                     return Err(Error::DuplicateElement("name", "entry"));
                 }
             },
-            e @ b"representativemember" => {
+            e @ b"representativeMember" => {
                 if representative_member.replace(FromXml::from_xml(&e, reader, buffer)?).is_some() {
                     return Err(Error::DuplicateElement("representativemember", "entry"));
                 }

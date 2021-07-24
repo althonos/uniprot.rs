@@ -21,7 +21,7 @@ impl FromXml for Member {
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert!(
-            event.local_name() == b"member" || event.local_name() == b"representativemember"
+            event.local_name() == b"member" || event.local_name() == b"representativeMember"
         );
 
         let mut sequence = None;
@@ -31,14 +31,14 @@ impl FromXml for Member {
             e @ b"sequence" => {
                 sequence = Some(FromXml::from_xml(&e, reader, buffer)?);
             },
-            e @ b"dbreference" => {
+            e @ b"dbReference" => {
                 dbref = Some(FromXml::from_xml(&e, reader, buffer)?);
             }
         }
 
         Ok(Member {
             sequence,
-            db_reference: dbref.ok_or(Error::MissingElement("dbreference", "member"))?,
+            db_reference: dbref.ok_or(Error::MissingElement("dbReference", "member"))?,
         })
     }
 }

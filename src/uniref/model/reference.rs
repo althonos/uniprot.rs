@@ -22,7 +22,7 @@ impl FromXml for Reference {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"dbreference");
+        debug_assert_eq!(event.local_name(), b"dbReference");
 
         // decode attributes
         let id = decode_attribute(event, reader, "id", "reference")?;
