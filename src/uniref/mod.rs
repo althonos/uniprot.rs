@@ -7,7 +7,15 @@ mod model;
 #[doc(inline)]
 pub use self::model::*;
 
-use super::parser::Parser;
+/// The sequential parser type for UniRef entries.
+pub type SequentialParser<B> = super::parser::SequentialParser<B, Entry>;
+
+#[cfg(feature = "threading")]
+/// The threaded parser type for UniRef entries.
+pub type ThreadedParser<B> = super::parser::ThreadedParser<B, Entry>;
+
+/// The parser type for UniRef entries.
+pub type Parser<B> = super::parser::Parser<B, Entry>;
 
 /// Parse a UniRef database XML file.
 ///
@@ -22,7 +30,7 @@ use super::parser::Parser;
 ///
 /// println!("{:#?}", parser.next())
 /// ```
-pub fn parse<B: BufRead>(reader: B) -> Parser<B, Entry> {
+pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
     Parser::new(reader)
 }
 
