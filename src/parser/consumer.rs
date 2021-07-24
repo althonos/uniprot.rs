@@ -18,9 +18,9 @@ use quick_xml::events::Event;
 use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
-use crate::error::Error;
 use super::FromXml;
 use super::UniprotDatabase;
+use crate::error::Error;
 
 pub struct Consumer<D: UniprotDatabase> {
     r_text: Receiver<Option<Vec<u8>>>,

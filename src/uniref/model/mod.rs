@@ -14,16 +14,16 @@ pub use crate::common::date::Date;
 pub use crate::common::property::Property;
 pub use crate::common::sequence::Sequence;
 
-use std::io::BufRead;
-use std::iter::FromIterator;
-use std::ops::Deref;
-use std::ops::DerefMut;
+use crate::error::Error;
 use crate::parser::utils::decode_attribute;
 use crate::parser::FromXml;
 use crate::parser::UniprotDatabase;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
-use crate::error::Error;
+use std::io::BufRead;
+use std::iter::FromIterator;
+use std::ops::Deref;
+use std::ops::DerefMut;
 
 // ---------------------------------------------------------------------------
 
@@ -91,7 +91,7 @@ impl FromXml for Entry {
 /// A UniRef database.
 #[derive(Debug, Clone)]
 pub struct UniRef {
-    entries: Vec<Entry>
+    entries: Vec<Entry>,
 }
 
 impl UniRef {
@@ -115,7 +115,7 @@ impl DerefMut for UniRef {
 }
 
 impl FromIterator<Entry> for UniRef {
-    fn from_iter<T: IntoIterator<Item=Entry>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Entry>>(iter: T) -> Self {
         Self::new(iter.into_iter().collect())
     }
 }
@@ -134,5 +134,5 @@ impl From<UniRef> for Vec<Entry> {
 
 impl UniprotDatabase for UniRef {
     type Entry = Entry;
-    const ROOTS: &'static [&'static [u8]] = &[ b"UniRef", b"UniRef50", b"UniRef90", b"UniRef100"];
+    const ROOTS: &'static [&'static [u8]] = &[b"UniRef", b"UniRef50", b"UniRef90", b"UniRef100"];
 }

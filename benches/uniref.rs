@@ -9,9 +9,9 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Cursor;
 
-use uniprot::uniref::model::Entry;
 use quick_xml::events::Event;
 use test::Bencher;
+use uniprot::uniref::model::Entry;
 
 #[bench]
 fn bench_read(b: &mut Bencher) {

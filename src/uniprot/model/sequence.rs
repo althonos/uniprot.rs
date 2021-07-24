@@ -4,13 +4,13 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use super::Date;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
-use super::Date;
 
 #[derive(Debug, Default, Clone)]
 /// The sequence of a protein.

@@ -142,15 +142,15 @@ extern crate url;
 
 #[macro_use]
 pub mod parser;
+mod common;
 pub mod error;
+pub mod uniparc;
 pub mod uniprot;
 pub mod uniref;
-pub mod uniparc;
-mod common;
 
 #[doc(hidden)]
 #[deprecated(
-    since="v0.4.0",
+    since = "v0.4.0",
     note = "UniProt code has been moved to the `uniprot` module, use `uniprot::uniprot::parse` instead"
 )]
 #[inline(always)]

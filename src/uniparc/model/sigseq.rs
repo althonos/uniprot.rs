@@ -29,7 +29,10 @@ impl FromXml for SignatureSequenceMatch {
         assert_eq!(event.local_name(), b"signatureSequenceMatch");
 
         let database = extract_attribute(event, "database")?
-            .ok_or(Error::MissingAttribute("database", "signatureSequenceMatch"))?
+            .ok_or(Error::MissingAttribute(
+                "database",
+                "signatureSequenceMatch",
+            ))?
             .unescape_and_decode_value(reader)?;
         let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "signatureSequenceMatch"))?
@@ -37,7 +40,7 @@ impl FromXml for SignatureSequenceMatch {
 
         let mut interpro = None;
         let mut locations = Vec::new();
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"ipr" => {
                 if interpro.replace(FromXml::from_xml(&e, reader, buffer)?).is_some() {
                     return Err(Error::DuplicateElement("ipr", "dbReference"));

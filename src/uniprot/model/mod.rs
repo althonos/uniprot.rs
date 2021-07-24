@@ -13,31 +13,31 @@ pub mod organism;
 pub mod protein;
 pub mod reference;
 
+mod db_reference;
 mod evidence;
 mod feature;
-mod sequence;
-mod db_reference;
 mod keyword;
 mod molecule;
+mod sequence;
 
+pub use self::db_reference::DbReference;
 pub use self::evidence::Evidence;
 pub use self::evidence::Source;
-pub use self::db_reference::DbReference;
 pub use self::feature::Feature;
 pub use self::feature::FeatureType;
 pub use self::keyword::Keyword;
 pub use self::molecule::Molecule;
-pub use self::sequence::Sequence;
 pub use self::sequence::FragmentType;
-pub use crate::common::property::Property;
+pub use self::sequence::Sequence;
 pub use crate::common::date::Date;
+pub use crate::common::property::Property;
 
 use std::collections::HashSet;
 use std::io::BufRead;
 use std::iter::FromIterator;
-use std::str::FromStr;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::str::FromStr;
 
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
@@ -193,7 +193,7 @@ impl FromXml for Entry {
 /// A UniProtKB database.
 #[derive(Debug, Clone)]
 pub struct UniProt {
-    entries: Vec<Entry>
+    entries: Vec<Entry>,
 }
 
 impl UniProt {
@@ -217,7 +217,7 @@ impl DerefMut for UniProt {
 }
 
 impl FromIterator<Entry> for UniProt {
-    fn from_iter<T: IntoIterator<Item=Entry>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Entry>>(iter: T) -> Self {
         Self::new(iter.into_iter().collect())
     }
 }
@@ -236,7 +236,7 @@ impl From<UniProt> for Vec<Entry> {
 
 impl UniprotDatabase for UniProt {
     type Entry = Entry;
-    const ROOTS: &'static [&'static [u8]] = &[ b"uniprot"];
+    const ROOTS: &'static [&'static [u8]] = &[b"uniprot"];
 }
 
 // ---------------------------------------------------------------------------

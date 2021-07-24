@@ -93,7 +93,7 @@ pub fn decode_opt_attribute<'a, B: BufRead, T: FromStr>(
                 Err(_) => match a.unescape_and_decode_value(reader) {
                     Ok(s) => Err(Error::invalid_value(name, element, s)),
                     Err(e) => Err(Error::from(e)),
-                }
+                },
             }
         }
     } else {

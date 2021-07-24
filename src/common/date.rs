@@ -2,10 +2,10 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::str::FromStr;
 
-use chrono::Datelike;
-use chrono::offset::Local;
 use chrono::format::ParseError;
 use chrono::naive::NaiveDate;
+use chrono::offset::Local;
+use chrono::Datelike;
 
 /// A naive date in `YYYY-MM-DD` format.
 #[derive(Debug, Clone)]
@@ -63,7 +63,6 @@ impl DerefMut for Date {
 impl Default for Date {
     fn default() -> Self {
         Local::now().date().naive_local().into()
-
     }
 }
 

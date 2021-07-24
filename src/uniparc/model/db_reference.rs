@@ -4,14 +4,14 @@ use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
 use crate::error::Error;
+use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::decode_opt_attribute;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
-use super::Property;
 use super::Date;
+use super::Property;
 
 #[derive(Debug, Clone)]
 pub struct DbReference {
@@ -55,7 +55,7 @@ impl FromXml for DbReference {
             .unescape_and_decode_value(reader)?;
 
         let mut properties = Vec::new();
-        parse_inner!{event, reader, buffer,
+        parse_inner! {event, reader, buffer,
             e @ b"property" => {
                 properties.push(FromXml::from_xml(&e, reader, buffer)?);
             }
@@ -69,7 +69,7 @@ impl FromXml for DbReference {
             active,
             created,
             last,
-            properties
+            properties,
         })
     }
 }

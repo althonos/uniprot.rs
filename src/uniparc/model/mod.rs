@@ -12,9 +12,9 @@ mod ipr;
 mod location;
 mod sigseq;
 
-pub use self::location::Location;
-pub use self::ipr::InterproReference;
 pub use self::db_reference::DbReference;
+pub use self::ipr::InterproReference;
+pub use self::location::Location;
 pub use self::sigseq::SignatureSequenceMatch;
 pub use crate::common::date::Date;
 pub use crate::common::property::Property;
@@ -30,8 +30,8 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::parser::utils::extract_attribute;
-use crate::parser::UniprotDatabase;
 use crate::parser::FromXml;
+use crate::parser::UniprotDatabase;
 
 // ---------------------------------------------------------------------------
 
@@ -97,7 +97,7 @@ impl FromXml for Entry {
 /// A UniParc database.
 #[derive(Debug, Clone)]
 pub struct UniParc {
-    entries: Vec<Entry>
+    entries: Vec<Entry>,
 }
 
 impl UniParc {
@@ -121,7 +121,7 @@ impl DerefMut for UniParc {
 }
 
 impl FromIterator<Entry> for UniParc {
-    fn from_iter<T: IntoIterator<Item=Entry>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = Entry>>(iter: T) -> Self {
         Self::new(iter.into_iter().collect())
     }
 }
@@ -140,5 +140,5 @@ impl From<UniParc> for Vec<Entry> {
 
 impl UniprotDatabase for UniParc {
     type Entry = Entry;
-    const ROOTS: &'static [&'static [u8]] = &[ b"uniparc"];
+    const ROOTS: &'static [&'static [u8]] = &[b"uniparc"];
 }

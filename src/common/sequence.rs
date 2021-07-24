@@ -1,11 +1,11 @@
 use std::io::BufRead;
 
+use crate::error::Error;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
-use crate::error::Error;
 
 /// A protein sequence.
 #[derive(Debug, Clone)]

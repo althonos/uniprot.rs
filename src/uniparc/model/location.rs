@@ -4,9 +4,8 @@ use crate::error::Error;
 use crate::parser::utils::decode_attribute;
 use crate::parser::FromXml;
 
-use quick_xml::Reader;
 use quick_xml::events::BytesStart;
-
+use quick_xml::Reader;
 
 #[derive(Debug, Clone)]
 pub struct Location {

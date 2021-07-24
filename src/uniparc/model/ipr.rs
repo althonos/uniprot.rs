@@ -29,9 +29,6 @@ impl FromXml for InterproReference {
             .unescape_and_decode_value(reader)?;
 
         reader.read_to_end(event.local_name(), buffer)?;
-        Ok(InterproReference {
-            name,
-            id
-        })
+        Ok(InterproReference { name, id })
     }
 }

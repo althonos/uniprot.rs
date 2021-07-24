@@ -132,7 +132,7 @@ impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
                         .send(Err(Error::UnexpectedRoot(x)))
                         .expect("channel should still be connected");
                     break;
-                },
+                }
                 Err(e) => {
                     s_item
                         .send(Err(Error::from(e)))
@@ -228,7 +228,9 @@ impl<B: BufRead, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
                     match self.reader.read_until(b'>', &mut self.buffer) {
                         // if a full entry is found, send it
                         Ok(_) if self.buffer.ends_with(&b"</entry>"[..]) => {
-                            self.s_text.send(Some(std::mem::take(&mut self.buffer))).ok();
+                            self.s_text
+                                .send(Some(std::mem::take(&mut self.buffer)))
+                                .ok();
                             self.state = State::Started;
                         }
                         // if we reach EOF before finding the end of the
@@ -238,7 +240,9 @@ impl<B: BufRead, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
                                 self.s_text.send(None).ok();
                             }
                             self.state = State::AtEof;
-                            return Some(Err(Error::from(XmlError::UnexpectedEof(String::from("entry")))));
+                            return Some(Err(Error::from(XmlError::UnexpectedEof(String::from(
+                                "entry",
+                            )))));
                         }
                         // if an error is encountered, send it and bail out
                         Err(e) => {
