@@ -7,13 +7,12 @@
 
 mod member;
 mod reference;
-mod sequence;
 
 pub use self::member::Member;
 pub use self::reference::Reference;
-pub use self::sequence::Sequence;
 pub use crate::common::date::Date;
 pub use crate::common::property::Property;
+pub use crate::common::sequence::Sequence;
 
 use std::io::BufRead;
 use std::iter::FromIterator;

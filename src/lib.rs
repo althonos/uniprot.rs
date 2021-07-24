@@ -145,6 +145,7 @@ pub mod parser;
 pub mod error;
 pub mod uniprot;
 pub mod uniref;
+pub mod uniparc;
 mod common;
 
 #[doc(inline)]

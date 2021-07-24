@@ -75,3 +75,28 @@ pub fn decode_attribute<'a, B: BufRead, T: FromStr>(
         })
     }
 }
+
+/// Decode the optional attribute `name` from `event.attributes()`.
+pub fn decode_opt_attribute<'a, B: BufRead, T: FromStr>(
+    event: &'a BytesStart<'a>,
+    reader: &mut Reader<B>,
+    name: &'static str,
+    element: &'static str,
+) -> Result<Option<T>, Error> {
+    if let Some(a) = extract_attribute(event, name)? {
+        unsafe {
+            // perform decoding only on error, since valid enum variants
+            // can only be obtained from valid UTF-8 anyway.
+            let s = std::str::from_utf8_unchecked(&*a.value);
+            match T::from_str(s) {
+                Ok(x) => Ok(Some(x)),
+                Err(_) => match a.unescape_and_decode_value(reader) {
+                    Ok(s) => Err(Error::invalid_value(name, element, s)),
+                    Err(e) => Err(Error::from(e)),
+                }
+            }
+        }
+    } else {
+        Ok(None)
+    }
+}
