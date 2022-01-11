@@ -328,6 +328,24 @@ impl<B: BufRead, D: UniprotDatabase> SequentialParser<B, D> {
             root,
         }
     }
+
+    /// Parse a single entry from the given reader.
+    pub fn parse_entry(reader: B) -> <Self as Iterator>::Item {
+        let mut xml = Reader::from_reader(reader);
+        xml.expand_empty_elements(true);
+        let mut parser = Self {
+            xml,
+            buffer: Vec::new(),
+            cache: None,
+            finished: false,
+            root: Vec::new(),
+        };
+
+        parser.next().unwrap_or_else(|| {
+            let e = String::from("xml");
+            Err(Error::from(XmlError::UnexpectedEof(e)))
+        })
+    }
 }
 
 impl<B: BufRead, D: UniprotDatabase> Iterator for SequentialParser<B, D> {

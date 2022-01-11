@@ -34,6 +34,25 @@ pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
     Parser::new(reader)
 }
 
+/// Parse a single UniParc entry.
+///
+/// This method is compatible with responses from the
+/// [EBI Proteins API](https://www.ebi.ac.uk/proteins/api/).
+///
+/// # Example
+/// ```rust
+/// let api_url = "https://www.ebi.ac.uk/proteins/api/uniparc/upi/UPI0000000001";
+///
+/// let req = ureq::get(&api_url).set("Accept", "application/xml");
+/// let reader = std::io::BufReader::new(req.call().unwrap().into_reader());
+/// let entry = uniprot::uniparc::parse_entry(reader).unwrap();
+///
+/// println!("{:?}", entry);
+/// ```
+pub fn parse_entry<B: BufRead>(reader: B) -> <Parser<B> as Iterator>::Item {
+    SequentialParser::parse_entry(reader)
+}
+
 #[cfg(test)]
 mod tests {
 

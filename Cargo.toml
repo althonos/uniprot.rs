@@ -41,6 +41,7 @@ optional = true
 [dev-dependencies]
 ftp = "3.0.1"
 libflate = "1.0.0"
+ureq = "2.4.0"
 
 [features]
 threading = ["crossbeam-channel", "lazy_static", "num_cpus"]

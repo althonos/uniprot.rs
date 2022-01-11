@@ -28,10 +28,33 @@ pub type Parser<B> = super::parser::Parser<B, UniProt>;
 /// let dec = libflate::gzip::Decoder::new(f).unwrap();
 /// let mut parser = uniprot::uniprot::parse(std::io::BufReader::new(dec));
 ///
-/// println!("{:#?}", parser.next())
+/// println!("{:#?}", parser.next());
 /// ```
 pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
     Parser::new(reader)
+}
+
+/// Parse a single UniProt entry.
+///
+/// This method is compatible with responses from the
+/// [EBI Proteins API](https://www.ebi.ac.uk/proteins/api/).
+///
+/// # Example
+///
+/// Retrieve a single protein entry using the Proteins API and the
+/// [`ureq`](https://crates.io/crates/ureq) to perform the HTTP request.
+///
+/// ```rust
+/// let api_url = "https://www.ebi.ac.uk/proteins/api/proteins/P02978";
+///
+/// let req = ureq::get(&api_url).set("Accept", "application/xml");
+/// let reader = std::io::BufReader::new(req.call().unwrap().into_reader());
+/// let entry = uniprot::uniprot::parse_entry(reader).unwrap();
+///
+/// println!("{:?}", entry);
+/// ```
+pub fn parse_entry<B: BufRead>(reader: B) -> <Parser<B> as Iterator>::Item {
+    SequentialParser::parse_entry(reader)
 }
 
 #[cfg(test)]
