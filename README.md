@@ -16,8 +16,11 @@
 
 ## 🔌 Usage
 
-The `uniprot::uniprot::parse` function can be used to obtain an iterator over
-the entries of a UniprotKB database in XML format (either SwissProt or TrEMBL).
+The [`uniprot::uniprot::parse`](https://docs.rs/uniprot/latest/uniprot/uniprot/fn.parse.html) function
+can be used to obtain an iterator over the entries of a UniprotKB database in
+XML format (either SwissProt or TrEMBL). XML files for UniRef and UniParc can
+also be parsed, with [`uniprot::uniref::parse`](https://docs.rs/uniprot/latest/uniprot/uniref/fn.parse.html)
+and [`uniprot::uniparc::parse`](https://docs.rs/uniprot/latest/uniprot/uniparc/fn.parse.html), respectively.
 
 ```rust
 extern crate uniprot;
@@ -32,14 +35,33 @@ for r in uniprot::uniprot::parse(f) {
 }
 ```
 
-XML files for UniRef and UniParc can also be parsed, with `uniprot::uniref::parse`
-and `uniprot::uniparc::parse`, respectively.
-
 Any [`BufRead`](https://doc.rust-lang.org/stable/std/io/trait.BufRead.html)
 implementor can be used as an input, so the database files can be streamed
 directly from their [online location](https://www.uniprot.org/downloads) with
 the help of an HTTP library such as [`reqwest`](https://docs.rs/reqwest), or
 using the [`ftp`](https://docs.rs/ftp) library.
+
+The XML format is the same for the EBI REST API and for the UniProt API, so
+this library can also be used to read single entries or larger queries. For
+instance, you can search UniProt for a keyword and retrieve all the matching
+entries:
+
+```rust
+extern crate ureq;
+extern crate libflate;
+extern crate uniprot;
+
+let query = "bacteriorhodopsin";
+let query_url = format!("https://www.uniprot.org/uniprot/?query={}&format=xml&compress=yes", query);
+
+let req = ureq::get(&query_url).set("Accept", "application/xml");
+let reader = libflate::gzip::Decoder::new(req.call().unwrap().into_reader()).unwrap();
+
+for r in uniprot::uniprot::parse(std::io::BufReader::new(reader)) {
+    let entry = r.unwrap();
+    // ... process the Uniprot entry ...
+}
+```
 
 See the online documentation at [`docs.rs`](https://docs.rs/uniprot) for more
 examples, and some details about the different features available.

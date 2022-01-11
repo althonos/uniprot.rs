@@ -42,6 +42,26 @@
 //! }
 //! ```
 //!
+//! The XML format is compatible with the results returned by the UniProt API,
+//! so you can also use the [`uniprot::uniprot::parse`] to parse search results:
+//!
+//! ```rust
+//! extern crate ureq;
+//! extern crate libflate;
+//! extern crate uniprot;
+//!
+//! let query = "bacteriorhodopsin";
+//! let query_url = format!("https://www.uniprot.org/uniprot/?query={}&format=xml&compress=yes", query);
+//!
+//! let req = ureq::get(&query_url).set("Accept", "application/xml");
+//! let reader = libflate::gzip::Decoder::new(req.call().unwrap().into_reader()).unwrap();
+//!
+//! for r in uniprot::uniprot::parse(std::io::BufReader::new(reader)) {
+//!     let entry = r.unwrap();
+//!     // ... process the Uniprot entry ...
+//! }
+//! ```
+//!
 //! ### UniRef
 //!
 //! The [`uniprot::uniref::parse`] function can be used to obtain an iterator
