@@ -10,6 +10,7 @@ homepage = "https://github.com/althonos/uniprot.rs"
 readme = "README.md"
 keywords = ["uniprotkb", "uniref", "swissprot", "trembl", "parser"]
 categories = ["science", "parser-implementations"]
+exclude = ["tests/*.xml"]
 
 [badges.travis-ci]
 repository = "althonos/uniprot.rs"
