@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.5.0...HEAD
+
+
+## [v0.5.0] - 2022-01-11
+[v0.5.0]: https://github.com/althonos/uniprot.rs/compare/v0.4.0...v0.5.0
+
+### Added
+- `parse_entry` functions to parse a single UniProt, UniParc or UniRef entry.
+
+### Fixed
+- Parsing of creation dates with a defined timezone (e.g. `2021-01-11Z`).
 
 
 ## [v0.4.0] - 2021-07-24
