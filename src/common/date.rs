@@ -81,7 +81,15 @@ impl From<Date> for NaiveDate {
 impl FromStr for Date {
     type Err = ParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        NaiveDate::parse_from_str(s, "%Y-%m-%d").map(Date::new)
+        const FORMATS: &[&'static str] = &["%Y-%m-%d", "%Y-%m-%d%Z", "%Y-%m-%d%:z"];
+        for (i, fmt) in FORMATS.iter().enumerate() {
+            match NaiveDate::parse_from_str(s, fmt) {
+                Ok(dt) => return Ok(Date::new(dt)),
+                Err(e) if i == FORMATS.len() - 1 => return Err(e),
+                Err(_) => (),
+            }
+        }
+        unreachable!()
     }
 }
 
@@ -93,6 +101,14 @@ mod tests {
 
     #[test]
     fn test_from_str() {
+        let date = Date::from_str("2012-12-25").unwrap();
+        assert_eq!(date.year(), 2012);
+        assert_eq!(date.month(), 12);
+        assert_eq!(date.day(), 25);
+    }
+
+    #[test]
+    fn test_datetime_from_str() {
         let date = Date::from_str("2012-12-25").unwrap();
         assert_eq!(date.year(), 2012);
         assert_eq!(date.month(), 12);
