@@ -24,7 +24,7 @@ pub type Parser<B> = super::parser::Parser<B, UniRef>;
 /// Connect to the EBI FTP server and parse the complete UniRef50 data dump
 /// using the [`ftp`](https://crates.io/crates/ftp) crate.
 ///
-/// ```rust
+/// ```rust,no_run
 /// let mut client = ftp::FtpStream::connect("ftp.uniprot.org:21").unwrap();
 /// client.login("anonymous", "anonymous").unwrap();
 ///
@@ -40,7 +40,7 @@ pub type Parser<B> = super::parser::Parser<B, UniRef>;
 ///
 /// ```rust
 /// let query = "bacteriorhodopsin";
-/// let query_url = format!("https://www.uniprot.org/uniref/?query={}&format=xml&compress=yes", query);
+/// let query_url = format!("https://www.uniprot.org/uniref/?query=reviewed:yes+AND+{}&format=xml&compress=yes", query);
 ///
 /// let req = ureq::get(&query_url).set("Accept", "application/xml");
 /// let reader = libflate::gzip::Decoder::new(req.call().unwrap().into_reader()).unwrap();

@@ -50,8 +50,8 @@
 //! extern crate libflate;
 //! extern crate uniprot;
 //!
-//! let query = "bacteriorhodopsin";
-//! let query_url = format!("https://www.uniprot.org/uniprot/?query={}&format=xml&compress=yes", query);
+//! let query = "colicin";
+//! let query_url = format!("https://www.uniprot.org/uniprot/?query=reviewed:yes+AND+{}&format=xml&compress=yes", query);
 //!
 //! let req = ureq::get(&query_url).set("Accept", "application/xml");
 //! let reader = libflate::gzip::Decoder::new(req.call().unwrap().into_reader()).unwrap();
