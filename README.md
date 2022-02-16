@@ -72,12 +72,20 @@ examples, and some details about the different features available.
   compiles the multithreaded parser that offers a 90% speed increase when
   processing XML files.
 
+## 🔍 See Also
 
-## 🤝 Credits
+If you're a bioinformatician and a Rustacean, you may be interested in these
+other libraries:
 
-`uniprot.rs` is developed and maintained by:
-- [Martin Larralde](https://github.com/althonos)
-
+- [`pubchem.rs`](https://github.com/althonos/pubchem.rs): Rust data structures
+  and API client for the PubChem API.
+- [`obofoundry.rs`](https://github.com/althonos/obofoundry.rs): Rust data
+  structures for the OBO Foundry.
+- [`fastobo`](https://github.com/fastobo/fastobo): Rust parser and abstract
+  syntax tree for Open Biomedical Ontologies.
+- [`proteinogenic`](https://github.com/althonos/proteinogenic): Chemical
+  structure generation for protein sequences as
+  [SMILES](https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system) strings.
 
 ## 📋 Changelog
 
@@ -90,3 +98,9 @@ in the [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) format.
 
 This library is provided under the open-source
 [MIT license](https://choosealicense.com/licenses/mit/).
+
+*This project is in no way not affiliated, sponsored, or otherwise endorsed
+by the UniProt Consortium. It was developed
+by [Martin Larralde](https://github.com/althonos/) during his PhD project
+at the [European Molecular Biology Laboratory](https://www.embl.de/) in
+the [Zeller team](https://github.com/zellerlab).*
