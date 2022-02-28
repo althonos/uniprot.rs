@@ -71,6 +71,8 @@ examples, and some details about the different features available.
 - [`threading`](https://docs.rs/uniprot/#threading) (_**enabled** by default_):
   compiles the multithreaded parser that offers a 90% speed increase when
   processing XML files.
+- [`url-links`](https://docs.rs/uniprot/#url-links) (_**disabled** by default_):
+  exposes the `links` in [`OnlineInformation`](https://docs.rs/uniprot/latest/uniprot/uniprot/comment/struct.OnlineInformation.html) as an [`url::Url`](https://docs.rs/url/latest/url/struct.Url.html).
 
 ## 🔍 See Also
 

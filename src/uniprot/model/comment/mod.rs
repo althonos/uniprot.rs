@@ -16,6 +16,8 @@ use std::str::FromStr;
 
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
+#[cfg(feature = "url-links")]
+use url::Url;
 
 use crate::error::Error;
 use crate::parser::utils::attributes_to_hashmap;
@@ -358,8 +360,10 @@ impl FromXml for Comment {
                             .transpose()?
                             .map(|a| a.unescape_and_decode_value(reader))
                             .transpose()?
-                            .map(|s| url::Url::parse(&s))
-                            .ok_or(Error::MissingElement("uri", "link"))??;
+                            .ok_or(Error::MissingElement("uri", "link"))?;
+                        #[cfg(feature = "url-links")]
+                        info.links.push(Url::from_str(&uri)?);
+                        #[cfg(not(feature = "url-links"))]
                         info.links.push(uri);
                         reader.read_to_end(b"link", buffer)?;
                     }

@@ -7,6 +7,7 @@ use std::str::ParseBoolError;
 
 use quick_xml::Error as XmlError;
 use thiserror::Error;
+#[cfg(feature = "url-links")]
 use url::ParseError as ParseUrlError;
 
 #[derive(Debug, Error)]
@@ -28,6 +29,7 @@ pub enum Error {
     #[error("parser error: {0}")]
     /// A boolean value could not be parsed successfully.
     ParseBool(#[from] ParseBoolError),
+    #[cfg(feature = "url-links")]
     #[error("parser error: {0}")]
     /// A `Url` value could not be parsed successfully.
     ParseUrl(#[from] ParseUrlError),
