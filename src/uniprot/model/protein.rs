@@ -115,7 +115,7 @@ impl FromXml for Name {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// The evidence supporting the existence of a protein.
 pub enum ProteinExistence {
     ProteinLevelEvidence,

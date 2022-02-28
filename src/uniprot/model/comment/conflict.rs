@@ -61,7 +61,7 @@ impl FromXml for Conflict {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ConflictType {
     Frameshift,
     ErroneousInitiation,
@@ -141,7 +141,7 @@ impl FromXml for ConflictSequence {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Resource {
     Embl,
     EmblCds,

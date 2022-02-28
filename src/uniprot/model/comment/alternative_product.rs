@@ -20,7 +20,7 @@ pub struct AlternativeProduct {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Event {
     AlternativeSplicing,
     AlternativeInitiation,
@@ -161,7 +161,7 @@ impl FromXml for IsoformSequence {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IsoformSequenceType {
     NotDescribed,
     Described,

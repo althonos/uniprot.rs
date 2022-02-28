@@ -129,7 +129,7 @@ impl FromXml for PhysiologicalReaction {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Direction {
     LeftToRight,
     RightToLeft,

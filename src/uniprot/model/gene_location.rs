@@ -55,7 +55,7 @@ impl FromXml for GeneLocation {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LocationType {
     Apicoplast,
     Chloroplast,
@@ -130,7 +130,7 @@ impl FromXml for LocationName {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// Indicates whether the name of a plasmid is known or unknown.
 pub enum LocationStatus {
     Known,

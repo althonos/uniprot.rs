@@ -72,7 +72,7 @@ impl FromXml for Sequence {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// A marker indicating whether a protein sequence is fragmented.
 pub enum FragmentType {
     Single,

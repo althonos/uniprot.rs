@@ -79,7 +79,7 @@ impl FromXml for Name {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NameType {
     Common,
     Full,

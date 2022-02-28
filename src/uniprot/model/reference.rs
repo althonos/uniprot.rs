@@ -213,7 +213,7 @@ impl FromXml for Citation {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// The type of a citation.
 pub enum CitationType {
     Book,
@@ -321,7 +321,7 @@ impl FromXml for Vec<Source> {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// The kind of sources where a sequence can originate from.
 pub enum SourceType {
     Strain,

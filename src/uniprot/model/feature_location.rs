@@ -113,7 +113,7 @@ impl FromXml for Position {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Status {
     Certain,
     Uncertain,

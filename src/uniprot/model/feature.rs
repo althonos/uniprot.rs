@@ -110,7 +110,7 @@ impl FromXml for Feature {
 
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 /// The type of annotations that can be attached to a sequence.
 pub enum FeatureType {
     ActiveSite,
