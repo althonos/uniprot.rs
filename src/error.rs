@@ -1,55 +1,56 @@
 //! Ubiquitous types for error management.
 
 use std::error::Error as StdError;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Result as FmtResult;
 use std::io::Error as IoError;
 use std::num::ParseIntError;
 use std::str::ParseBoolError;
 
 use quick_xml::Error as XmlError;
-use thiserror::Error;
 #[cfg(feature = "url-links")]
 use url::ParseError as ParseUrlError;
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 /// The main error type for the [`uniprot`] crate.
 ///
 /// [`uniprot`]: ../index.html
 pub enum Error {
-    #[error(transparent)]
     /// The underlying XML parser encountered an error.
     ///
     /// *Any error from the underlying reader will be wrapped in the
     /// [`XmlError::Io`] variant.*
     ///
     /// [`XmlError::Io`]: https://docs.rs/quick-xml/latest/quick_xml/enum.Error.html#variant.Io
-    Xml(#[from] XmlError),
-    #[error("parser error: {0}")]
+    Xml(XmlError),
+
     /// An integer value could not be parsed successfully.
-    ParseInt(#[from] ParseIntError),
-    #[error("parser error: {0}")]
+    ParseInt(ParseIntError),
+
     /// A boolean value could not be parsed successfully.
-    ParseBool(#[from] ParseBoolError),
-    #[cfg(feature = "url-links")]
-    #[error("parser error: {0}")]
-    /// A `Url` value could not be parsed successfully.
-    ParseUrl(#[from] ParseUrlError),
-    #[error("missing element `{0}` in `{1}`")]
+    ParseBool(ParseBoolError),
+
     /// A required element is missing.
     MissingElement(&'static str, &'static str),
-    #[error("missing attribute `{0}` in `{1}`")]
+
     /// A required attribute is missing.
     MissingAttribute(&'static str, &'static str),
-    #[error("duplicate element `{0}` in `{1}`")]
+
     /// An element which should be unique was found more than once.
     DuplicateElement(&'static str, &'static str),
-    #[error("invalid value for attribute `{0}` in `{1}`")]
+
     /// A value could not be parsed successfully.
-    InvalidValue(&'static str, &'static str, #[source] InvalidValue),
+    InvalidValue(&'static str, &'static str, InvalidValue),
+
     /// Unexpected root element.
-    #[error("unexpected root element `{0}`")]
     UnexpectedRoot(String),
+
+    #[cfg(feature = "url-links")]
+    /// A `Url` value could not be parsed successfully.
+    ParseUrl(ParseUrlError),
+
     #[cfg(feature = "threading")]
-    #[error("unexpected threading channel disconnection")]
     /// A communication channel between threads was disconnected early.
     DisconnectedChannel,
 }
@@ -64,9 +65,69 @@ impl Error {
     }
 }
 
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        use self::Error::*;
+        match self {
+            Xml(e) => e.fmt(f),
+            ParseInt(e) => write!(f, "parser error: {}", e),
+            ParseBool(e) => write!(f, "parser error: {}", e),
+            #[cfg(feature = "url-links")]
+            ParseUrl(e) => write!(f, "parser error: {}", e),
+            MissingElement(x, y) => write!(f, "missing element `{}` in `{}`", x, y),
+            MissingAttribute(x, y) => write!(f, "missing attribute `{}` in `{}`", x, y),
+            DuplicateElement(x, y) => write!(f, "duplicate element `{}` in `{}`", x, y),
+            InvalidValue(x, y, _) => write!(f, "invalid value for attribute `{}` in `{}`", x, y),
+            UnexpectedRoot(root) => write!(f, "unexpected root element `{}`", root),
+            #[cfg(feature = "threading")]
+            DisconnectedChannel => write!(f, "unexpected threading channel disconnection"),
+        }
+    }
+}
+
 impl From<IoError> for Error {
     fn from(e: IoError) -> Self {
         Self::from(XmlError::Io(e))
+    }
+}
+
+impl From<ParseBoolError> for Error {
+    fn from(e: ParseBoolError) -> Self {
+        Error::ParseBool(e)
+    }
+}
+
+impl From<ParseIntError> for Error {
+    fn from(e: ParseIntError) -> Self {
+        Error::ParseInt(e)
+    }
+}
+
+#[cfg(feature = "url-links")]
+impl From<ParseUrlError> for Error {
+    fn from(e: ParseUrlError) -> Self {
+        Error::ParseUrl(e)
+    }
+}
+
+impl From<XmlError> for Error {
+    fn from(e: XmlError) -> Self {
+        Error::Xml(e)
+    }
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        use self::Error::*;
+        match self {
+            Xml(e) => Some(e),
+            ParseInt(e) => Some(e),
+            ParseBool(e) => Some(e),
+            InvalidValue(_, _, e) => Some(e),
+            #[cfg(feature = "url-links")]
+            ParseUrl(e) => Some(e),
+            _ => None,
+        }
     }
 }
 
@@ -77,10 +138,17 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 // ---------------------------------------------------------------------------
 
-#[derive(Default, Debug, Clone, Error, PartialEq, Eq)]
-#[error("invalid value: {0}")]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 /// The error type for types with constrained values.
 pub struct InvalidValue(pub String);
+
+impl Display for InvalidValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "invalid value: {}", &self.0)
+    }
+}
+
+impl StdError for InvalidValue {}
 
 impl<S: Into<String>> From<S> for InvalidValue {
     fn from(s: S) -> Self {

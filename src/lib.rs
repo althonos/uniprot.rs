@@ -154,7 +154,6 @@ extern crate lazy_static;
 #[cfg(feature = "threading")]
 extern crate num_cpus;
 extern crate quick_xml;
-extern crate thiserror;
 #[cfg(feature = "url-links")]
 extern crate url;
 

@@ -27,7 +27,6 @@ chrono = "0.4.19"
 fnv = "1.0.6"
 memchr = "2.4.0"
 quick-xml = "0.22.0"
-thiserror = "1.0"
 [dependencies.url]
 version = "2.1.1"
 optional = true
