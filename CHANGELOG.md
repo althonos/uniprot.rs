@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.5.2...HEAD
+
+
+## [v0.5.2] - 2022-02-28
+[v0.5.2]: https://github.com/althonos/uniprot.rs/compare/v0.5.1...v0.5.2
+
+### Added
+- `PartialEq`, `Eq`, `Hash` and `Clone` traits to simple enum types (like `uniprot::uniprot::FeatureType`).
+
+### Changed
+- Feature gate the `url` crate dependency to skip parsing links into `url::Url` if not needed.
+- Remove dependency on `thiserror` by manually implementing `std::error::Error` where needed.
 
 
 ## [v0.5.1] - 2022-01-11
