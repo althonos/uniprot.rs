@@ -6,8 +6,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
+[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.6.0...HEAD
 
-[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.5.2...HEAD
+
+## [v0.6.0] - 2022-10-17
+[v0.6.0]: https://github.com/althonos/uniprot.rs/compare/v0.5.2...v0.6.0
+
+### Removed
+- Deprecated `CalciumBindingRegion`, `MetalIonBindingSite` and `NucleotidePhosphateBindingRegion` variants of `uniprot::FeatureType`.
+
+### Added
+- `uniprot::Ligand` and `uniprot::LigandPart` structs for the `ligand` and `ligand_part` attributes of `uniprot::Feature`.
+
+### Changed
+- Updated URLs in documentation examples to use the new Uniprot REST API.
+- Moved the `uniref::parse_entry` example to` uniref::parse` since single-entry requests to UniRef don't return single entries anymore.
 
 
 ## [v0.5.2] - 2022-02-28
