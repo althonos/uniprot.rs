@@ -19,6 +19,8 @@ mod feature;
 mod keyword;
 mod molecule;
 mod sequence;
+mod ligand;
+mod ligand_part;
 
 pub use self::db_reference::DbReference;
 pub use self::evidence::Evidence;
@@ -29,6 +31,8 @@ pub use self::keyword::Keyword;
 pub use self::molecule::Molecule;
 pub use self::sequence::FragmentType;
 pub use self::sequence::Sequence;
+pub use self::ligand::Ligand;
+pub use self::ligand_part::LigandPart;
 pub use crate::common::date::Date;
 pub use crate::common::property::Property;
 

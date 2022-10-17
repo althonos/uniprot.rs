@@ -11,6 +11,8 @@ use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
+use super::ligand::Ligand;
+use super::ligand_part::LigandPart;
 use super::feature_location::FeatureLocation;
 
 #[derive(Debug, Clone)]
@@ -31,6 +33,8 @@ pub struct Feature {
     pub description: Option<String>,
     pub evidences: Vec<usize>,
     pub reference: Option<String>,
+    pub ligand: Option<Ligand>,
+    pub ligand_part: Option<LigandPart>,
 }
 
 impl Feature {
@@ -44,6 +48,8 @@ impl Feature {
             description: Default::default(),
             evidences: Default::default(),
             reference: Default::default(),
+            ligand: Default::default(),
+            ligand_part: Default::default(),
         }
     }
 }
@@ -65,6 +71,8 @@ impl FromXml for Feature {
         let mut variation: Vec<String> = Vec::new();
         let mut original: Option<String> = None;
         let mut optloc: Option<FeatureLocation> = None;
+        let mut optligand: Option<Ligand> = None;
+        let mut optligandpart: Option<LigandPart> = None;
         parse_inner! {event, reader, buffer,
             e @ b"location" => {
                 let loc = FeatureLocation::from_xml(&e, reader, buffer)?;
@@ -77,6 +85,18 @@ impl FromXml for Feature {
             },
             b"variation" => {
                 variation.push(reader.read_text(b"variation", buffer)?);
+            },
+            e @ b"ligand" => {
+                let ligand = Ligand::from_xml(&e, reader, buffer)?;
+                if optligand.replace(ligand).is_some() {
+                    return Err(Error::DuplicateElement("ligand", "feature"));
+                }
+            },
+            e @ b"ligandPart" => {
+                let ligandpart = LigandPart::from_xml(&e, reader, buffer)?;
+                if optligandpart.replace(ligandpart).is_some() {
+                    return Err(Error::DuplicateElement("ligandPart", "feature"));
+                }
             }
         }
 
@@ -103,6 +123,8 @@ impl FromXml for Feature {
         feature.evidences = get_evidences(reader, &attr)?;
         feature.original = original;
         feature.variation = variation;
+        feature.ligand = optligand;
+        feature.ligand_part = optligandpart;
 
         Ok(feature)
     }
