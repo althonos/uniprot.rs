@@ -51,9 +51,11 @@
 //! extern crate uniprot;
 //!
 //! let query = "colicin";
-//! let query_url = format!("https://www.uniprot.org/uniprot/?query=reviewed:yes+AND+{}&format=xml&compress=yes", query);
-//!
-//! let req = ureq::get(&query_url).set("Accept", "application/xml");
+//! let req = ureq::get("https://rest.uniprot.org/uniprot/search")
+//!     .set("Accept", "application/xml")
+//!     .query("query", &format!("reviewed:true AND {}", query))
+//!     .query("format", "xml")
+//!     .query("compress", "true");
 //! let reader = libflate::gzip::Decoder::new(req.call().unwrap().into_reader()).unwrap();
 //!
 //! for r in uniprot::uniprot::parse(std::io::BufReader::new(reader)) {
