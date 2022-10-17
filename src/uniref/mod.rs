@@ -35,27 +35,6 @@ pub type Parser<B> = super::parser::Parser<B, UniRef>;
 /// println!("{:#?}", parser.next());
 /// ```
 ///
-/// Search for entries using a [UniProt API query](https://www.uniprot.org/help/api_queries).
-/// to retrieve UniRef entries matchin a given search term (*bacteriorhodopsin*):
-///
-/// ```rust
-/// let query = "bacteriorhodopsin";
-/// let query_url = format!("https://www.uniprot.org/uniref/?query=reviewed:yes+AND+{}&format=xml&compress=yes", query);
-///
-/// let req = ureq::get(&query_url).set("Accept", "application/xml");
-/// let reader = libflate::gzip::Decoder::new(req.call().unwrap().into_reader()).unwrap();
-/// let mut parser = uniprot::uniref::parse(std::io::BufReader::new(reader));
-///
-/// println!("{:#?}", parser.next());
-/// ```
-pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
-    Parser::new(reader)
-}
-
-/// Parse a single UniRef entry.
-///
-/// # Example
-///
 /// Retrieve a single protein entry directly from the UniProt website using
 /// [`ureq`](https://crates.io/crates/ureq) to perform the HTTP request.
 ///
@@ -63,11 +42,17 @@ pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
 /// let api_url = "https://www.uniprot.org/uniref/UniRef90_P99999.xml";
 ///
 /// let req = ureq::get(&api_url).set("Accept", "application/xml");
-/// let reader = std::io::BufReader::new(req.call().unwrap().into_reader());
-/// let entry = uniprot::uniref::parse_entry(reader).unwrap();
+/// let dec = libflate::gzip::Decoder::new(req.call().unwrap().into_reader()).unwrap();
+/// let reader = std::io::BufReader::new(dec);
+/// let entry = uniprot::uniref::parse(reader).next().unwrap().unwrap();
 ///
 /// println!("{:?}", entry);
 /// ```
+pub fn parse<B: BufRead>(reader: B) -> Parser<B> {
+    Parser::new(reader)
+}
+
+/// Parse a single UniRef entry.
 pub fn parse_entry<B: BufRead>(reader: B) -> <Parser<B> as Iterator>::Item {
     SequentialParser::parse_entry(reader)
 }
