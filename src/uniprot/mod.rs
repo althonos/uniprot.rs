@@ -65,12 +65,12 @@ mod tests {
     use quick_xml::Error as XmlError;
 
     #[test]
-    fn parse_swissprot_200() {
+    fn parse_swissprot_250() {
         let f = std::fs::File::open("tests/uniprot.xml").unwrap();
         let entries = super::parse(std::io::BufReader::new(f))
             .collect::<Result<Vec<_>, _>>()
             .expect("entries should parse successfully");
-        assert_eq!(entries.len(), 200);
+        assert_eq!(entries.len(), 250);
     }
 
     mod sequential {
