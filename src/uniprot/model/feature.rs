@@ -11,9 +11,9 @@ use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
+use super::feature_location::FeatureLocation;
 use super::ligand::Ligand;
 use super::ligand_part::LigandPart;
-use super::feature_location::FeatureLocation;
 
 #[derive(Debug, Clone)]
 /// Describes different types of sequence annotations
