@@ -20,7 +20,6 @@ enum State {
     Finished,
 }
 
-
 #[cfg(feature = "threading")]
 pub struct Producer<B> {
     reader: Option<B>,
@@ -31,12 +30,7 @@ pub struct Producer<B> {
 }
 
 impl<B: BufRead + Send + 'static> Producer<B> {
-
-    pub(super) fn new(
-        reader: B,
-        threads: usize,
-        s_text: Sender<Option<Vec<u8>>>,
-    ) -> Self {
+    pub(super) fn new(reader: B, threads: usize, s_text: Sender<Option<Vec<u8>>>) -> Self {
         Self {
             reader: Some(reader),
             s_text,
@@ -82,15 +76,13 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                             state = State::Finished;
                             // return Some(Err(Error::from(e)));
                         }
-                    }
+                    },
                     State::Reading => {
                         // read until the end of the entry.
                         match reader.read_until(b'>', &mut buffer) {
                             // if a full entry is found, send it
                             Ok(_) if buffer.ends_with(&b"</entry>"[..]) => {
-                                s_text
-                                    .send(Some(buffer.as_slice().to_vec()))
-                                    .ok();
+                                s_text.send(Some(buffer.as_slice().to_vec())).ok();
                                 state = State::Started;
                                 buffer.clear();
                             }
@@ -115,7 +107,7 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                             // otherwise just keep iterating.
                             _ => (),
                         }
-                    }                    
+                    }
                     State::AtEof | State::Finished => break,
                     _ => unimplemented!(),
                 }

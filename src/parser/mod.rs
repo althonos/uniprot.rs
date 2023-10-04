@@ -203,7 +203,7 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
                             if !self.producer.is_alive() {
                                 self.state = State::Finished
                             }
-                        },
+                        }
                         // queue was disconnected: stop and return an error
                         Err(RecvTimeoutError::Disconnected) => {
                             if self.state != State::Finished {

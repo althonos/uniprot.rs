@@ -30,7 +30,7 @@ pub type Parser<B> = super::parser::Parser<B, UniProt>;
 ///
 /// println!("{:#?}", parser.next());
 /// ```
-pub fn parse<B: BufRead + Send+ 'static>(reader: B) -> Parser<B> {
+pub fn parse<B: BufRead + Send + 'static>(reader: B) -> Parser<B> {
     Parser::new(reader)
 }
 
@@ -53,7 +53,7 @@ pub fn parse<B: BufRead + Send+ 'static>(reader: B) -> Parser<B> {
 ///
 /// println!("{:?}", entry);
 /// ```
-pub fn parse_entry<B: BufRead + Send+ 'static>(reader: B) -> <Parser<B> as Iterator>::Item {
+pub fn parse_entry<B: BufRead + Send + 'static>(reader: B) -> <Parser<B> as Iterator>::Item {
     SequentialParser::parse_entry(reader)
 }
 
