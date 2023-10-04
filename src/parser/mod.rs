@@ -58,6 +58,11 @@ use self::consumer::Consumer;
 
 // ---------------------------------------------------------------------------
 
+#[allow(unused)]
+const SLEEP_DURATION: Duration = Duration::from_millis(10);
+
+// ---------------------------------------------------------------------------
+
 #[cfg(feature = "threading")]
 #[derive(Debug, PartialEq, Eq)]
 /// The state of the `ThreadedParser`.
@@ -269,7 +274,7 @@ impl<B: BufRead, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
                     return None;
                 }
                 State::Waiting => {
-                    std::thread::sleep(Duration::from_micros(1));
+                    std::thread::sleep(SLEEP_DURATION);
                 }
             }
         }

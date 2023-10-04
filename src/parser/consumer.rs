@@ -20,6 +20,7 @@ use quick_xml::Reader;
 
 use super::FromXml;
 use super::UniprotDatabase;
+use super::SLEEP_DURATION;
 use crate::error::Error;
 
 pub struct Consumer<D: UniprotDatabase> {
@@ -54,7 +55,7 @@ impl<D: UniprotDatabase> Consumer<D> {
             loop {
                 // get the buffer containing the XML entry
                 let text = loop {
-                    match r_text.recv_timeout(Duration::from_micros(1)) {
+                    match r_text.recv_timeout(SLEEP_DURATION) {
                         Ok(Some(text)) => break text,
                         Ok(None) => {
                             alive.store(false, Ordering::SeqCst);
