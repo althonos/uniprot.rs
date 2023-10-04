@@ -89,9 +89,10 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                             // if a full entry is found, send it
                             Ok(_) if buffer.ends_with(&b"</entry>"[..]) => {
                                 s_text
-                                    .send(Some(std::mem::take(&mut buffer)))
+                                    .send(Some(buffer.as_slice().to_vec()))
                                     .ok();
                                 state = State::Started;
+                                buffer.clear();
                             }
                             // if we reach EOF before finding the end of the
                             // entry, that's an issue, we report an error.
