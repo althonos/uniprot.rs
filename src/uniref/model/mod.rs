@@ -44,7 +44,7 @@ impl FromXml for Entry {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"entry");
+        debug_assert_eq!(event.local_name().as_ref(), b"entry");
 
         // parse attributes
         let id = decode_attribute(event, reader, "id", "reference")?;
@@ -56,8 +56,8 @@ impl FromXml for Entry {
         let mut properties = Vec::new();
         let mut members = Vec::new();
         parse_inner! {event, reader, buffer,
-            b"name" => {
-                if name.replace(reader.read_text(b"name", buffer)?).is_some() {
+            e @ b"name" => {
+                if name.replace(parse_text!(e, reader, buffer)).is_some() {
                     return Err(Error::DuplicateElement("name", "entry"));
                 }
             },

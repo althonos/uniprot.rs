@@ -128,11 +128,11 @@ impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
         loop {
             buffer.clear();
             match xml.read_event_into(&mut buffer) {
-                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name()) => {
+                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name().as_ref()) => {
                     break;
                 }
                 Ok(Event::Start(e)) => {
-                    let x = String::from_utf8_lossy(e.local_name()).into_owned();
+                    let x = String::from_utf8_lossy(e.local_name().as_ref()).into_owned();
                     s_item
                         .send(Err(Error::UnexpectedRoot(x)))
                         .expect("channel should still be connected");
@@ -168,7 +168,7 @@ impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
             s_text,
             threads,
             consumers,
-            reader: xml.into_underlying_reader(),
+            reader: xml.into_inner(),
             state: State::Idle,
             buffer: Vec::new(),
         }

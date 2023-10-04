@@ -165,7 +165,7 @@ mod common;
 pub mod error;
 pub mod uniparc;
 pub mod uniprot;
-// pub mod uniref;
+pub mod uniref;
 
 #[doc(hidden)]
 #[deprecated(
