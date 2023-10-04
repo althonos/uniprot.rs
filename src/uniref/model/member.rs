@@ -21,7 +21,8 @@ impl FromXml for Member {
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert!(
-            event.local_name().as_ref() == b"member" || event.local_name().as_ref() == b"representativeMember"
+            event.local_name().as_ref() == b"member"
+                || event.local_name().as_ref() == b"representativeMember"
         );
 
         let mut sequence = None;
