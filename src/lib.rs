@@ -173,6 +173,6 @@ pub mod uniref;
     note = "UniProt code has been moved to the `uniprot` module, use `uniprot::uniprot::parse` instead"
 )]
 #[inline(always)]
-pub fn parse<B: std::io::BufRead>(reader: B) -> self::uniprot::Parser<B> {
+pub fn parse<B: std::io::BufRead + Send + 'static>(reader: B) -> self::uniprot::Parser<B> {
     self::uniprot::parse(reader)
 }

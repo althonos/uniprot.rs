@@ -76,19 +76,111 @@ enum State {
 }
 
 #[cfg(feature = "threading")]
+struct Producer<B> {
+    reader: Option<B>,
+    threads: usize,
+    s_text: Sender<Option<Vec<u8>>>,
+    alive: Arc<AtomicBool>,
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl<B: BufRead + Send + 'static> Producer<B> {
+    pub fn start(&mut self) {
+        self.alive.store(true, Ordering::SeqCst);
+
+        let alive = self.alive.clone();
+        let threads = self.threads;
+        let mut reader = self.reader.take().unwrap();
+        let mut s_text = self.s_text.clone();
+
+        self.handle = Some(std::thread::spawn(move || {
+            let mut buffer = Vec::new();
+            let mut state = State::Started;
+            loop {
+                match state {
+                    State::Started => match reader.read_until(b'>', &mut buffer) {
+                        // we reached EOF, but that's okay, we were not
+                        // reading an entry;
+                        Ok(0) => {
+                            for _ in 0..threads {
+                                s_text.send(None).ok();
+                            }
+                            state = State::AtEof;
+                        }
+                        // we found the beginning of an entry, now we
+                        // must read the entire entry until the end.
+                        Ok(_) => {
+                            let i = memchr::memrchr(b'<', &buffer).unwrap();
+                            if buffer[i..].starts_with(b"<entry") {
+                                state = State::Reading;
+                            }
+                        }
+                        // if an error is encountered, send it and bail out
+                        Err(e) => {
+                            state = State::Finished;
+                            // return Some(Err(Error::from(e)));
+                        }
+                    }
+                    State::Reading => {
+                        // read until the end of the entry.
+                        match reader.read_until(b'>', &mut buffer) {
+                            // if a full entry is found, send it
+                            Ok(_) if buffer.ends_with(&b"</entry>"[..]) => {
+                                s_text
+                                    .send(Some(std::mem::take(&mut buffer)))
+                                    .ok();
+                                state = State::Started;
+                            }
+                            // if we reach EOF before finding the end of the
+                            // entry, that's an issue, we report an error.
+                            Ok(0) => {
+                                for _ in 0..threads {
+                                    s_text.send(None).ok();
+                                }
+                                state = State::AtEof;
+                                // return Some(Err(Error::from(XmlError::UnexpectedEof(String::from(
+                                //     "entry",
+                                // )))));
+                            }
+                            // if an error is encountered, send it and bail out
+                            Err(e) => {
+                                state = State::Finished;
+                                // return Some(Err(Error::from(e)));
+                            }
+                            // otherwise just keep iterating.
+                            _ => (),
+                        }
+                    }                    
+                    State::AtEof | State::Finished => break,
+                    _ => unimplemented!(),
+                }
+            }
+            alive.store(false, Ordering::SeqCst);
+        }));
+    }
+
+    pub fn join(&mut self) -> std::thread::Result<()> {
+        if let Some(handle) = self.handle.take() {
+            handle.join()
+        } else {
+            Ok(())
+        }
+    }
+}
+
+
+#[cfg(feature = "threading")]
 /// A parser for the Uniprot XML formats that parses entries in parallel.
 pub struct ThreadedParser<B: BufRead, D: UniprotDatabase> {
-    reader: B,
     state: State,
     threads: usize,
+    producer: Producer<B>,
     consumers: Vec<Consumer<D>>,
     r_item: Receiver<Result<D::Entry, Error>>,
-    s_text: Sender<Option<Vec<u8>>>,
-    buffer: Vec<u8>,
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
+impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
     /// Create a new `ThreadedParser` using all available CPUs.
     ///
     /// This number of threads is extracted at runtime using the
@@ -155,6 +247,15 @@ impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
             }
         }
 
+        //
+        let producer = Producer {
+            s_text,
+            threads,
+            reader: Some(xml.into_inner()),
+            handle: None,
+            alive: Arc::new(AtomicBool::new(false)),
+        };
+
         // create the consumer and the workers
         let mut consumers = Vec::with_capacity(threads);
         for _ in 0..threads {
@@ -165,20 +266,27 @@ impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
         // return the parser
         Self {
             r_item,
-            s_text,
+            producer,
             threads,
             consumers,
-            reader: xml.into_inner(),
             state: State::Idle,
-            buffer: Vec::new(),
         }
     }
 }
 
 #[cfg(feature = "threading")]
-impl<B: BufRead, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
+impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
     type Item = Result<D::Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
+
+        if self.state == State::Idle {
+            self.state = State::Started;
+            self.producer.start();
+            for consumer in &mut self.consumers {
+                consumer.start();
+            }
+        }
+
         loop {
             // poll for parsed entries to return
             match self.r_item.try_recv() {
@@ -200,83 +308,92 @@ impl<B: BufRead, D: UniprotDatabase> Iterator for ThreadedParser<B, D> {
                 }
             }
 
-            // depending on the state, do something before polling
-            match self.state {
-                State::Started => {
-                    // read until a new entry is found, or exit
-                    match self.reader.read_until(b'>', &mut self.buffer) {
-                        // we reached EOF, but that's okay, we were not
-                        // reading an entry;
-                        Ok(0) => {
-                            for _ in 0..self.threads {
-                                self.s_text.send(None).ok();
-                            }
-                            self.state = State::AtEof;
-                        }
-                        // we found the beginning of an entry, now we
-                        // must read the entire entry until the end.
-                        Ok(_) => {
-                            let i = memchr::memrchr(b'<', &self.buffer).unwrap();
-                            if self.buffer[i..].starts_with(b"<entry") {
-                                self.state = State::Reading;
-                            }
-                        }
-                        // if an error is encountered, send it and bail out
-                        Err(e) => {
-                            self.state = State::Finished;
-                            return Some(Err(Error::from(e)));
-                        }
-                    }
-                }
-                State::Reading => {
-                    // read until the end of the entry.
-                    match self.reader.read_until(b'>', &mut self.buffer) {
-                        // if a full entry is found, send it
-                        Ok(_) if self.buffer.ends_with(&b"</entry>"[..]) => {
-                            self.s_text
-                                .send(Some(std::mem::take(&mut self.buffer)))
-                                .ok();
-                            self.state = State::Started;
-                        }
-                        // if we reach EOF before finding the end of the
-                        // entry, that's an issue, we report an error.
-                        Ok(0) => {
-                            for _ in 0..self.threads {
-                                self.s_text.send(None).ok();
-                            }
-                            self.state = State::AtEof;
-                            return Some(Err(Error::from(XmlError::UnexpectedEof(String::from(
-                                "entry",
-                            )))));
-                        }
-                        // if an error is encountered, send it and bail out
-                        Err(e) => {
-                            self.state = State::Finished;
-                            return Some(Err(Error::from(e)));
-                        }
-                        // otherwise just keep iterating.
-                        _ => (),
-                    }
-                }
-                State::AtEof => {
-                    self.state = State::Waiting;
-                    for consumer in self.consumers.iter_mut() {
-                        consumer.join().unwrap();
-                    }
-                }
-                State::Idle => {
-                    self.state = State::Started;
-                    for consumer in &mut self.consumers {
-                        consumer.start();
-                    }
-                }
-                State::Finished => {
-                    return None;
-                }
-                State::Waiting => {
-                    std::thread::sleep(SLEEP_DURATION);
+            // 
+            if !self.producer.alive.load(Ordering::SeqCst) {
+                self.state = State::Waiting;
+                for consumer in &mut self.consumers {
+                    consumer.join().unwrap();
                 }
             }
+
+            // depending on the state, do something before polling
+            // match self.state {
+            //     State::Started => {
+            //         // read until a new entry is found, or exit
+            //         match self.reader.read_until(b'>', &mut self.buffer) {
+            //             // we reached EOF, but that's okay, we were not
+            //             // reading an entry;
+            //             Ok(0) => {
+            //                 for _ in 0..self.threads {
+            //                     self.s_text.send(None).ok();
+            //                 }
+            //                 self.state = State::AtEof;
+            //             }
+            //             // we found the beginning of an entry, now we
+            //             // must read the entire entry until the end.
+            //             Ok(_) => {
+            //                 let i = memchr::memrchr(b'<', &self.buffer).unwrap();
+            //                 if self.buffer[i..].starts_with(b"<entry") {
+            //                     self.state = State::Reading;
+            //                 }
+            //             }
+            //             // if an error is encountered, send it and bail out
+            //             Err(e) => {
+            //                 self.state = State::Finished;
+            //                 return Some(Err(Error::from(e)));
+            //             }
+            //         }
+            //     }
+            //     State::Reading => {
+            //         // read until the end of the entry.
+            //         match self.reader.read_until(b'>', &mut self.buffer) {
+            //             // if a full entry is found, send it
+            //             Ok(_) if self.buffer.ends_with(&b"</entry>"[..]) => {
+            //                 self.s_text
+            //                     .send(Some(std::mem::take(&mut self.buffer)))
+            //                     .ok();
+            //                 self.state = State::Started;
+            //             }
+            //             // if we reach EOF before finding the end of the
+            //             // entry, that's an issue, we report an error.
+            //             Ok(0) => {
+            //                 for _ in 0..self.threads {
+            //                     self.s_text.send(None).ok();
+            //                 }
+            //                 self.state = State::AtEof;
+            //                 return Some(Err(Error::from(XmlError::UnexpectedEof(String::from(
+            //                     "entry",
+            //                 )))));
+            //             }
+            //             // if an error is encountered, send it and bail out
+            //             Err(e) => {
+            //                 self.state = State::Finished;
+            //                 return Some(Err(Error::from(e)));
+            //             }
+            //             // otherwise just keep iterating.
+            //             _ => (),
+            //         }
+            //     }
+            //     State::AtEof => {
+            //         self.state = State::Waiting;
+            //         for consumer in self.consumers.iter_mut() {
+            //             consumer.join().unwrap();
+            //         }
+            //     }
+            //     State::Idle => {
+            //         self.state = State::Started;
+            //         self.producer.start();
+            //         for consumer in &mut self.consumers {
+            //             consumer.start();
+            //         }
+            //     }
+            //     State::Finished => {
+            //         return None;
+            //     }
+            //     State::Waiting => {
+            //         std::thread::sleep(SLEEP_DURATION);
+            //     }
+            // }
         }
     }
 }
