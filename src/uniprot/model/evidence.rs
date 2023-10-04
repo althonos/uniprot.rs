@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -38,14 +39,15 @@ impl FromXml for Evidence {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"evidence");
+        debug_assert_eq!(event.local_name().as_ref(), b"evidence");
 
         let attr = attributes_to_hashmap(event)?;
         let key = decode_attribute(event, reader, "key", "evidence")?;
         let ty = attr
             .get(&b"type"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
-            .ok_or(Error::MissingAttribute("type", "evidence"))??;
+            .map(|x| x.decode_and_unescape_value(reader))
+            .ok_or(Error::MissingAttribute("type", "evidence"))?
+            .map(Cow::into_owned)?;
 
         let mut evidence = Self::new(key, ty);
         parse_inner! {event, reader, buffer,
@@ -88,7 +90,7 @@ impl FromXml for Source {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"source");
+        debug_assert_eq!(event.local_name().as_ref(), b"source");
 
         let mut optdbref = None;
         parse_inner! {event, reader, buffer,

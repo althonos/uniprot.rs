@@ -32,24 +32,24 @@ impl FromXml for Absorption {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"absorption");
+        debug_assert_eq!(event.local_name().as_ref(), b"absorption");
 
         let mut absorption = Absorption::default();
         parse_inner! {event, reader, buffer,
-            b"max" => {
-                let max = reader.read_text(b"max", buffer)?;
+            e @ b"max" => {
+                let max = parse_text!(e, reader, buffer);
                 if absorption.max.replace(max).is_some() {
                     return Err(Error::DuplicateElement("max", "absorption"));
                 }
             },
-            b"min" => {
-                let min = reader.read_text(b"min", buffer)?;
+            e @ b"min" => {
+                let min = parse_text!(e, reader, buffer);
                 if absorption.min.replace(min).is_some() {
                     return Err(Error::DuplicateElement("min", "absorption"));
                 }
             },
-            b"text" => {
-                let text = reader.read_text(b"text", buffer)?;
+            e @ b"text" => {
+                let text = parse_text!(e, reader, buffer);
                 if absorption.text.replace(text).is_some() {
                     return Err(Error::DuplicateElement("text", "absorption"));
                 }
@@ -75,18 +75,18 @@ impl FromXml for Kinetics {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"kinetics");
+        debug_assert_eq!(event.local_name().as_ref(), b"kinetics");
 
         let mut kinetics = Kinetics::default();
         parse_inner! {event, reader, buffer,
-            b"KM" => {
-                kinetics.km.push(reader.read_text(b"KM", buffer)?);
+            e @ b"KM" => {
+                kinetics.km.push(parse_text!(e, reader, buffer));
             },
-            b"Vmax" => {
-                kinetics.vmax.push(reader.read_text(b"Vmax", buffer)?);
+            e @ b"Vmax" => {
+                kinetics.vmax.push(parse_text!(e, reader, buffer));
             },
-            b"text" => {
-                let text = reader.read_text(b"text", buffer)?;
+            e @ b"text" => {
+                let text = parse_text!(e, reader, buffer);
                 if kinetics.text.replace(text).is_some() {
                     return Err(Error::DuplicateElement("text", "kinetics"));
                 }

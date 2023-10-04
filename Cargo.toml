@@ -26,7 +26,7 @@ status     = "as-is"
 chrono = "0.4.31"
 fnv = "1.0.6"
 memchr = "2.6.4"
-quick-xml = "0.22.0"
+quick-xml = "0.30.0"
 [dependencies.url]
 version = "2.4.1"
 optional = true

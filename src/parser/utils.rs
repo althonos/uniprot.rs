@@ -20,7 +20,7 @@ pub fn attributes_to_hashmap<'a>(
 ) -> Result<HashMap<&'a [u8], Attribute<'a>>, Error> {
     event
         .attributes()
-        .map(|r| r.map(|a| (a.key, a)).map_err(Error::from))
+        .map(|r| r.map(|a| (a.key.into_inner(), a)).map_err(Error::from))
         .collect()
 }
 
@@ -31,7 +31,12 @@ pub fn extract_attribute<'a>(
     event
         .attributes()
         .with_checks(false)
-        .find(|r| r.is_err() || r.as_ref().ok().map_or(false, |a| a.key == name.as_bytes()))
+        .find(|r| {
+            r.is_err()
+                || r.as_ref()
+                    .ok()
+                    .map_or(false, |a| a.key.as_ref() == name.as_bytes())
+        })
         .transpose()
         .map_err(Error::from)
 }
@@ -41,7 +46,7 @@ pub fn get_evidences<'a, B: BufRead>(
     attr: &HashMap<&'a [u8], Attribute<'a>>,
 ) -> Result<Vec<usize>, Error> {
     attr.get(&b"evidence"[..])
-        .map(|a| a.unescape_and_decode_value(reader))
+        .map(|a| a.decode_and_unescape_value(reader))
         .transpose()?
         .map(|e| {
             e.split(' ')
@@ -69,7 +74,7 @@ pub fn decode_attribute<'a, B: BufRead, T: FromStr>(
         // perform decoding only on error, since valid enum variants
         // can only be obtained from valid UTF-8 anyway.
         let s = std::str::from_utf8_unchecked(&*a.value);
-        T::from_str(s).map_err(|_| match a.unescape_and_decode_value(reader) {
+        T::from_str(s).map_err(|_| match a.decode_and_unescape_value(reader) {
             Ok(s) => Error::invalid_value(name, element, s),
             Err(e) => Error::from(e),
         })
@@ -90,7 +95,7 @@ pub fn decode_opt_attribute<'a, B: BufRead, T: FromStr>(
             let s = std::str::from_utf8_unchecked(&*a.value);
             match T::from_str(s) {
                 Ok(x) => Ok(Some(x)),
-                Err(_) => match a.unescape_and_decode_value(reader) {
+                Err(_) => match a.decode_and_unescape_value(reader) {
                     Ok(s) => Err(Error::invalid_value(name, element, s)),
                     Err(e) => Err(Error::from(e)),
                 },

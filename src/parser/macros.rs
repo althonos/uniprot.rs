@@ -8,30 +8,29 @@ macro_rules! parse_inner {
             use $crate::quick_xml::Error as XmlError;
 
             $buffer.clear();
-            match $reader.read_event($buffer) {
+            match $reader.read_event_into($buffer) {
                 Ok(Event::Start(ref x)) => {
-                    parse_inner_impl!(x, x.local_name(), $($rest)*);
-                    $reader.read_to_end(x.local_name(), &mut Vec::new())?;
+                    parse_inner_impl!(x, x.name(), $($rest)*);
+                    $reader.read_to_end_into(x.name(), &mut Vec::new())?;
                     unimplemented!(
                         "`{}` in `{}`",
-                        String::from_utf8_lossy(x.local_name()),
-                        String::from_utf8_lossy($event.local_name())
+                        String::from_utf8_lossy(x.local_name().as_ref()),
+                        String::from_utf8_lossy($event.local_name().as_ref())
                     );
                 }
                 Err(e) => {
                     return Err(Error::from(e));
                 }
                 Ok(Event::Eof) => {
-                    let e = String::from_utf8_lossy($event.local_name()).to_string();
+                    let e = String::from_utf8_lossy($event.local_name().as_ref()).to_string();
                     return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
                 Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
                     break;
                 }
                 Ok(Event::End(ref e)) => {
-                    let expected = $event.unescaped()
-                        .map(|s| String::from_utf8_lossy(s.as_ref()).to_string())?;
-                    let found = String::from_utf8_lossy(e.name()).to_string();
+                    let expected = String::from_utf8_lossy($event.name().as_ref()).to_string();
+                    let found = String::from_utf8_lossy(e.name().as_ref()).to_string();
                     let e = XmlError::EndEventMismatch { expected, found };
                     return Err(Error::from(e));
                 }
@@ -46,14 +45,14 @@ macro_rules! parse_inner_impl {
     ( $x:ident, $name:expr ) => ();
     ( $x:ident, $name:expr, ) => ();
     ( $x:ident, $name:expr, $e:ident @ $l:expr => $r:expr ) => (
-        if $name == $l {
+        if $name.as_ref() == $l.as_ref() {
             let $e = $x.clone().into_owned();
             $r;
             continue;
         }
     );
     ( $x:ident, $name:expr, $l:expr => $r:expr ) => (
-        if $name == $l {
+        if $name.as_ref() == $l.as_ref() {
             $r;
             continue;
         }
@@ -75,8 +74,8 @@ macro_rules! parse_comment {
     };
     ( $event:ident, $reader:ident, $buffer:ident, $comment:ident, $($rest:tt)* ) => {
         parse_inner!{$event, $reader, $buffer,
-            b"text" => {
-                $comment.text.push($reader.read_text(b"text", $buffer)?);
+            t @ b"text" => {
+                $comment.text.push(parse_text!(&t, $reader, $buffer));
             },
             m @ b"molecule" => {
                 $comment.molecule = Molecule::from_xml(&m, $reader, $buffer)
@@ -85,4 +84,51 @@ macro_rules! parse_comment {
             $($rest)*
         }
     }
+}
+
+#[allow(unused_macros)]
+macro_rules! parse_text {
+    ( $event:expr, $reader:ident, $buffer:ident ) => {{
+        let mut txt = String::new();
+
+        loop {
+            use $crate::quick_xml::events::BytesEnd;
+            use $crate::quick_xml::events::BytesStart;
+            use $crate::quick_xml::events::Event;
+            use $crate::quick_xml::Error as XmlError;
+
+            $buffer.clear();
+            match $reader.read_event_into($buffer) {
+                Ok(Event::Text(ref e)) => {
+                    if txt.is_empty() {
+                        txt = e.unescape()?.into_owned();
+                    } else {
+                        txt.push_str(&e.unescape()?);
+                    }
+                }
+                Ok(Event::Start(ref x)) => {
+                    return Err(Error::from(XmlError::TextNotFound));
+                }
+                Err(e) => {
+                    return Err(Error::from(e));
+                }
+                Ok(Event::Eof) => {
+                    let e = String::from_utf8_lossy($event.local_name().as_ref()).to_string();
+                    return Err(Error::from(XmlError::UnexpectedEof(e)));
+                }
+                Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
+                    break;
+                }
+                Ok(Event::End(ref e)) => {
+                    let expected = String::from_utf8_lossy($event.name().as_ref()).to_string();
+                    let found = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    let e = XmlError::EndEventMismatch { expected, found };
+                    return Err(Error::from(e));
+                }
+                _ => continue,
+            }
+        }
+
+        txt
+    }};
 }

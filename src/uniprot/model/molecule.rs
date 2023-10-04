@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 
 use quick_xml::events::BytesStart;
@@ -20,16 +21,14 @@ impl FromXml for Molecule {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"molecule");
+        debug_assert_eq!(event.local_name().as_ref(), b"molecule");
 
         match extract_attribute(event, "type")? {
-            None => reader
-                .read_text(b"molecule", buffer)
-                .map(Molecule::Name)
-                .map_err(Error::from),
+            None => Ok(Molecule::Name(parse_text!(event, reader, buffer))),
             Some(attr) => {
-                reader.read_to_end(b"molecule", buffer)?;
-                attr.unescape_and_decode_value(reader)
+                reader.read_to_end_into(event.name(), buffer)?;
+                attr.decode_and_unescape_value(reader)
+                    .map(Cow::into_owned)
                     .map(Molecule::Id)
                     .map_err(Error::from)
             }

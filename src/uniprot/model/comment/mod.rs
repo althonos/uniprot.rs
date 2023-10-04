@@ -11,6 +11,7 @@ mod mass_spectrometry;
 mod online_information;
 mod subcellular_location;
 
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -79,7 +80,7 @@ impl FromXml for Comment {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"comment");
+        debug_assert_eq!(event.local_name().as_ref(), b"comment");
 
         let attr = attributes_to_hashmap(event)?;
         let mut comment = Comment::new(CommentType::Miscellaneous);
@@ -192,12 +193,12 @@ impl FromXml for Comment {
                     e @ b"interactant" => {
                         interactants.push(Interactant::from_xml(&e, reader, buffer)?);
                     },
-                    b"organismsDiffer" => {
-                        let text = reader.read_text(b"organismsDiffer", buffer)?;
+                    e @ b"organismsDiffer" => {
+                        let text = parse_text!(e, reader, buffer);
                         organisms_differ = bool::from_str(&text)?;
                     },
-                    b"experiments" => {
-                        let text = reader.read_text(b"experiments", buffer)?;
+                    e @ b"experiments" => {
+                        let text = parse_text!(e, reader, buffer);
                         experiments = usize::from_str(&text).map(Some)?;
                     }
                 }
@@ -245,19 +246,21 @@ impl FromXml for Comment {
                 let mut ms = MassSpectrometry::default();
                 ms.mass = attr
                     .get(&b"mass"[..])
-                    .map(|x| x.unescape_and_decode_value(reader))
+                    .map(|x| x.decode_and_unescape_value(reader))
                     .transpose()?
                     .map(|s| f64::from_str(&s))
                     .transpose()
                     .expect("could not parse `mass` as f64");
                 ms.error = attr
                     .get(&b"error"[..])
-                    .map(|x| x.unescape_and_decode_value(reader))
-                    .transpose()?;
+                    .map(|x| x.decode_and_unescape_value(reader))
+                    .transpose()?
+                    .map(Cow::into_owned);
                 ms.method = attr
                     .get(&b"method"[..])
-                    .map(|x| x.unescape_and_decode_value(reader))
-                    .transpose()?;
+                    .map(|x| x.decode_and_unescape_value(reader))
+                    .transpose()?
+                    .map(Cow::into_owned);
 
                 parse_comment! {event, reader, buffer, comment}
                 comment.ty = CommentType::MassSpectrometry(ms);
@@ -293,24 +296,24 @@ impl FromXml for Comment {
                     },
                     e @ b"phDependence" => {
                         parse_inner!{e, reader, buffer,
-                            b"text" => {
-                                let text = reader.read_text(b"text", buffer)?;
+                            e @ b"text" => {
+                                let text = parse_text!(e, reader, buffer);
                                 bcp.ph_dependence = Some(text);
                             }
                         }
                     },
                     e @ b"redoxPotential" => {
                         parse_inner!{e, reader, buffer,
-                            b"text" => {
-                                let text = reader.read_text(b"text", buffer)?;
+                            e @ b"text" => {
+                                let text = parse_text!(e, reader, buffer);
                                 bcp.redox_potential = Some(text);
                             }
                         }
                     },
                     e @ b"temperatureDependence" => {
                         parse_inner!{e, reader, buffer,
-                            b"text" => {
-                                let text = reader.read_text(b"text", buffer)?;
+                            e @ b"text" => {
+                                let text = parse_text!(e, reader, buffer);
                                 bcp.temperature_dependence = Some(text);
                             }
                         }
@@ -350,22 +353,24 @@ impl FromXml for Comment {
                 let mut info = OnlineInformation::default();
                 info.name = attr
                     .get(&b"name"[..])
-                    .map(|a| a.unescape_and_decode_value(reader))
-                    .transpose()?;
+                    .map(|a| a.decode_and_unescape_value(reader))
+                    .transpose()?
+                    .map(Cow::into_owned);
 
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"link" => {
                         let uri = e.attributes()
-                            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"uri").unwrap_or_default())
+                            .find(|x| x.is_err() || x.as_ref().map(|a| a.key.as_ref() == b"uri").unwrap_or_default())
                             .transpose()?
-                            .map(|a| a.unescape_and_decode_value(reader))
+                            .map(|a| a.decode_and_unescape_value(reader))
                             .transpose()?
+                            .map(Cow::into_owned)
                             .ok_or(Error::MissingElement("uri", "link"))?;
                         #[cfg(feature = "url-links")]
                         info.links.push(Url::from_str(&uri)?);
                         #[cfg(not(feature = "url-links"))]
                         info.links.push(uri);
-                        reader.read_to_end(b"link", buffer)?;
+                        reader.read_to_end_into(e.name(), buffer)?;
                     }
                 }
 

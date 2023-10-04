@@ -31,7 +31,7 @@ impl FromXml for Sequence {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"sequence");
+        debug_assert_eq!(event.local_name().as_ref(), b"sequence");
 
         let attr = attributes_to_hashmap(event)?;
         let length = decode_attribute(event, reader, "length", "sequence")?;
@@ -40,13 +40,13 @@ impl FromXml for Sequence {
         let modified = decode_attribute(event, reader, "modified", "sequence")?;
         // let modified = TODO
         let precursor = extract_attribute(event, "precursor")?
-            .map(|x| x.unescape_and_decode_value(reader))
+            .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|x| bool::from_str(&x))
             .transpose()?;
         let checksum = attr
             .get(&b"checksum"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
+            .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|x| u64::from_str_radix(&x, 16))
             .ok_or(Error::MissingAttribute("checksum", "sequence"))??;
@@ -56,7 +56,7 @@ impl FromXml for Sequence {
             Err(other) => return Err(other),
         };
 
-        let value = reader.read_text(b"sequence", buffer)?;
+        let value = parse_text!(event, reader, buffer);
         Ok(Sequence {
             value,
             length,

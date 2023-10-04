@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -42,23 +43,31 @@ impl FromXml for Interactant {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"interactant");
+        debug_assert_eq!(event.local_name().as_ref(), b"interactant");
 
         let mut interactant = event
             .attributes()
-            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"intactId").unwrap_or_default())
+            .find(|x| {
+                x.is_err()
+                    || x.as_ref()
+                        .map(|a| a.key.as_ref() == b"intactId")
+                        .unwrap_or_default()
+            })
             .ok_or(Error::MissingAttribute("intactId", "Interactant"))?
-            .and_then(|a| a.unescape_and_decode_value(reader).map(Interactant::new))?;
+            .map_err(Error::from)
+            .and_then(|a| a.decode_and_unescape_value(reader).map_err(Error::from))
+            .map(Cow::into_owned)
+            .map(Interactant::new)?;
 
         parse_inner! {event, reader, buffer,
-            b"id" => {
-                let id = reader.read_text(b"id", buffer)?;
+            e @ b"id" => {
+                let id = parse_text!(e, reader, buffer);
                 if interactant.id.replace(id).is_some() {
                     return Err(Error::DuplicateElement("id", "interaction"));
                 }
             },
-            b"label" => {
-                let label = reader.read_text(b"label", buffer)?;
+            e @ b"label" => {
+                let label = parse_text!(e, reader, buffer);
                 if interactant.label.replace(label).is_some() {
                     return Err(Error::DuplicateElement("label", "interaction"));
                 }

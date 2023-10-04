@@ -7,7 +7,9 @@ use std::fmt::Result as FmtResult;
 use std::io::Error as IoError;
 use std::num::ParseIntError;
 use std::str::ParseBoolError;
+use std::sync::Arc;
 
+use quick_xml::events::attributes::AttrError;
 use quick_xml::Error as XmlError;
 #[cfg(feature = "url-links")]
 use url::ParseError as ParseUrlError;
@@ -87,7 +89,7 @@ impl Display for Error {
 
 impl From<IoError> for Error {
     fn from(e: IoError) -> Self {
-        Self::from(XmlError::Io(e))
+        Self::from(XmlError::Io(Arc::new(e)))
     }
 }
 
@@ -107,6 +109,12 @@ impl From<ParseIntError> for Error {
 impl From<ParseUrlError> for Error {
     fn from(e: ParseUrlError) -> Self {
         Error::ParseUrl(e)
+    }
+}
+
+impl From<AttrError> for Error {
+    fn from(e: AttrError) -> Self {
+        Error::Xml(e.into())
     }
 }
 

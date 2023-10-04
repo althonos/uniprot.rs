@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -22,17 +23,18 @@ impl FromXml for Keyword {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"keyword");
+        debug_assert_eq!(event.local_name().as_ref(), b"keyword");
 
         let attr = attributes_to_hashmap(event)?;
         let mut keyword = Keyword::default();
 
-        keyword.value = reader.read_text(b"keyword", buffer)?;
+        keyword.value = parse_text!(event, reader, buffer);
         keyword.evidence = get_evidences(reader, &attr)?;
         keyword.id = attr
             .get(&b"id"[..])
             .ok_or(Error::MissingAttribute("id", "keyword"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
 
         Ok(keyword)
     }

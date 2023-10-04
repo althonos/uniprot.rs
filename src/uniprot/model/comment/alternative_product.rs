@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -48,8 +49,8 @@ impl FromXml for Event {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"event");
-        reader.read_to_end(b"event", buffer)?;
+        debug_assert_eq!(event.local_name().as_ref(), b"event");
+        reader.read_to_end_into(event.name(), buffer)?;
         decode_attribute(event, reader, "type", "event")
     }
 }
@@ -81,7 +82,7 @@ impl FromXml for Isoform {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"isoform");
+        debug_assert_eq!(event.local_name().as_ref(), b"isoform");
 
         let mut ids = Vec::new();
         let mut names = Vec::new();
@@ -89,14 +90,14 @@ impl FromXml for Isoform {
         let mut optseq: Option<IsoformSequence> = None;
 
         parse_inner! {event, reader, buffer,
-            b"id" => {
-                ids.push(reader.read_text(b"id", buffer)?);
+            e @ b"id" => {
+                ids.push(parse_text!(e, reader, buffer));
             },
-            b"name" => {
-                names.push(reader.read_text(b"name", buffer)?);
+            e @ b"name" => {
+                names.push(parse_text!(e, reader, buffer));
             },
-            b"text" => {
-                texts.push(reader.read_text(b"text", buffer)?);
+            e @ b"text" => {
+                texts.push(parse_text!(e, reader, buffer));
             },
             e @ b"sequence" => {
                 let seq = FromXml::from_xml(&e, reader, buffer)?;
@@ -147,13 +148,14 @@ impl FromXml for IsoformSequence {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"sequence");
+        debug_assert_eq!(event.local_name().as_ref(), b"sequence");
 
-        reader.read_to_end(b"sequence", buffer)?;
+        reader.read_to_end_into(event.name(), buffer)?;
 
         let reference = extract_attribute(event, "ref")?
-            .map(|x| x.unescape_and_decode_value(reader))
-            .transpose()?;
+            .map(|x| x.decode_and_unescape_value(reader))
+            .transpose()?
+            .map(Cow::into_owned);
         decode_attribute(event, reader, "type", "sequence")
             .map(|ty| Self::with_reference(ty, reference))
     }

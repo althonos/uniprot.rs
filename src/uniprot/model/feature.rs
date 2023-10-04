@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -60,7 +61,7 @@ impl FromXml for Feature {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"feature");
+        debug_assert_eq!(event.local_name().as_ref(), b"feature");
 
         use self::FeatureType::*;
 
@@ -80,11 +81,11 @@ impl FromXml for Feature {
                     return Err(Error::DuplicateElement("location", "feature"));
                 }
             },
-            b"original" => {
-                original = reader.read_text(b"original", buffer).map(Some)?;
+            e @ b"original" => {
+                original = Some(parse_text!(e, reader, buffer));
             },
-            b"variation" => {
-                variation.push(reader.read_text(b"variation", buffer)?);
+            e @ b"variation" => {
+                variation.push(parse_text!(e, reader, buffer));
             },
             e @ b"ligand" => {
                 let ligand = Ligand::from_xml(&e, reader, buffer)?;
@@ -110,16 +111,19 @@ impl FromXml for Feature {
         // extract optional attributes
         feature.id = attr
             .get(&b"id"[..])
-            .map(|a| a.unescape_and_decode_value(reader))
-            .transpose()?;
+            .map(|a| a.decode_and_unescape_value(reader))
+            .transpose()?
+            .map(Cow::into_owned);
         feature.description = attr
             .get(&b"description"[..])
-            .map(|a| a.unescape_and_decode_value(reader))
-            .transpose()?;
+            .map(|a| a.decode_and_unescape_value(reader))
+            .transpose()?
+            .map(Cow::into_owned);
         feature.reference = attr
             .get(&b"ref"[..])
-            .map(|a| a.unescape_and_decode_value(reader))
-            .transpose()?;
+            .map(|a| a.decode_and_unescape_value(reader))
+            .transpose()?
+            .map(Cow::into_owned);
         feature.evidences = get_evidences(reader, &attr)?;
         feature.original = original;
         feature.variation = variation;

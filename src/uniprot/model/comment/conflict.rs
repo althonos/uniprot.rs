@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -34,7 +35,7 @@ impl FromXml for Conflict {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"conflict");
+        debug_assert_eq!(event.local_name().as_ref(), b"conflict");
 
         // create a new `Conflict` with the right type
         let mut conflict =
@@ -42,8 +43,9 @@ impl FromXml for Conflict {
 
         // extract optional reference
         conflict.reference = extract_attribute(event, "type")?
-            .map(|x| x.unescape_and_decode_value(reader))
-            .transpose()?;
+            .map(|x| x.decode_and_unescape_value(reader))
+            .transpose()?
+            .map(Cow::into_owned);
 
         // extract `sequence` element
         parse_inner! {event, reader, buffer,
@@ -119,22 +121,23 @@ impl FromXml for ConflictSequence {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"sequence");
+        debug_assert_eq!(event.local_name().as_ref(), b"sequence");
 
         let attr = attributes_to_hashmap(event)?;
         let id = attr
             .get(&b"id"[..])
             .ok_or(Error::MissingAttribute("id", "sequence"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
         let version = attr
             .get(&b"version"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
+            .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|s| usize::from_str(&s))
             .transpose()?;
         let res = decode_attribute(event, reader, "resource", "sequence")?;
 
-        reader.read_to_end(b"sequence", buffer)?;
+        reader.read_to_end_into(event.name(), buffer)?;
         Ok(ConflictSequence::with_version(id, res, version))
     }
 }

@@ -23,7 +23,7 @@ impl FromXml for Gene {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"gene");
+        debug_assert_eq!(event.local_name().as_ref(), b"gene");
 
         let mut gene = Gene::default();
         parse_inner! {event, reader, buffer,
@@ -68,10 +68,10 @@ impl FromXml for Name {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"name");
+        debug_assert_eq!(event.local_name().as_ref(), b"name");
 
         let attr = attributes_to_hashmap(event)?;
-        let name = reader.read_text(event.local_name(), buffer)?;
+        let name = parse_text!(event, reader, buffer);
         let evidence = get_evidences(reader, &attr)?;
         let ty = decode_attribute(event, reader, "type", "name")?;
 

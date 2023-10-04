@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 
 use quick_xml::events::BytesStart;
@@ -26,7 +27,7 @@ impl FromXml for DbReference {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"dbReference");
+        debug_assert_eq!(event.local_name().as_ref(), b"dbReference");
 
         let mut db_reference = DbReference::default();
         parse_inner! {event, reader, buffer,
@@ -44,10 +45,12 @@ impl FromXml for DbReference {
         // let attr = attributes_to_hashmap(event)?;
         db_reference.ty = extract_attribute(event, "type")?
             .ok_or(Error::MissingAttribute("type", "dbReference"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
         db_reference.id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "dbReference"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
 
         Ok(db_reference)
     }

@@ -127,7 +127,7 @@ impl<B: BufRead, D: UniprotDatabase> ThreadedParser<B, D> {
         // read until we enter the root element
         loop {
             buffer.clear();
-            match xml.read_event(&mut buffer) {
+            match xml.read_event_into(&mut buffer) {
                 Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name()) => {
                     break;
                 }
@@ -307,14 +307,14 @@ impl<B: BufRead, D: UniprotDatabase> SequentialParser<B, D> {
         // read until we enter the `uniprot` element
         let cache = loop {
             buffer.clear();
-            match xml.read_event(&mut buffer) {
+            match xml.read_event_into(&mut buffer) {
                 Err(e) => break Some(Err(Error::from(e))),
-                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name()) => {
-                    root.extend(e.local_name());
+                Ok(Event::Start(e)) if D::ROOTS.contains(&e.local_name().as_ref()) => {
+                    root.extend(e.local_name().as_ref());
                     break None;
                 }
                 Ok(Event::Start(e)) => {
-                    let x = String::from_utf8_lossy(e.local_name()).into_owned();
+                    let x = String::from_utf8_lossy(e.local_name().as_ref()).into_owned();
                     break Some(Err(Error::UnexpectedRoot(x)));
                 }
                 Ok(Event::Eof) => {
@@ -369,7 +369,7 @@ impl<B: BufRead, D: UniprotDatabase> Iterator for SequentialParser<B, D> {
         // enter the next `entry` element
         loop {
             self.buffer.clear();
-            match self.xml.read_event(&mut self.buffer) {
+            match self.xml.read_event_into(&mut self.buffer) {
                 // if an error is raised, return it
                 Err(e) => return Some(Err(Error::from(e))),
                 // error if reaching EOF
@@ -379,12 +379,12 @@ impl<B: BufRead, D: UniprotDatabase> Iterator for SequentialParser<B, D> {
                     return Some(Err(Error::from(XmlError::UnexpectedEof(e))));
                 }
                 // if end of `uniprot` is reached, return no further item
-                Ok(Event::End(ref e)) if e.local_name() == &self.root => {
+                Ok(Event::End(ref e)) if e.local_name().as_ref() == &self.root => {
                     self.finished = true;
                     return None;
                 }
                 // create a new Entry
-                Ok(Event::Start(ref e)) if e.local_name() == b"entry" => {
+                Ok(Event::Start(ref e)) if e.local_name().as_ref() == b"entry" => {
                     return Some(D::Entry::from_xml(
                         &e.clone().into_owned(),
                         &mut self.xml,

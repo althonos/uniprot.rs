@@ -24,7 +24,7 @@ impl FromXml for FeatureLocation {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"location");
+        debug_assert_eq!(event.local_name().as_ref(), b"location");
 
         let mut optbegin: Option<Position> = None;
         let mut optend: Option<Position> = None;
@@ -83,9 +83,9 @@ impl FromXml for Position {
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
         debug_assert!(
-            event.local_name() == b"begin"
-                || event.local_name() == b"end"
-                || event.local_name() == b"position"
+            event.local_name().as_ref() == b"begin"
+                || event.local_name().as_ref() == b"end"
+                || event.local_name().as_ref() == b"position"
         );
 
         let attr = attributes_to_hashmap(event)?;
@@ -97,12 +97,12 @@ impl FromXml for Position {
         let evidence = get_evidences(reader, &attr)?;
         let pos = attr
             .get(&b"position"[..])
-            .map(|x| x.unescape_and_decode_value(reader))
+            .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|x| usize::from_str(&x))
             .transpose()?;
 
-        reader.read_to_end(event.local_name(), buffer)?;
+        reader.read_to_end_into(event.name(), buffer)?;
         Ok(Position {
             pos,
             status,

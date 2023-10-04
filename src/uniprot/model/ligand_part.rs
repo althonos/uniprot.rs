@@ -35,7 +35,7 @@ impl FromXml for LigandPart {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"ligandPart");
+        debug_assert_eq!(event.local_name().as_ref(), b"ligandPart");
 
         // extract the location and variants
         let mut db_reference: Option<DbReference> = None;
@@ -49,20 +49,20 @@ impl FromXml for LigandPart {
                     return Err(Error::DuplicateElement("dbReference", "ligandPart"));
                 }
             },
-            b"note" => {
-                let text = reader.read_text(b"note", buffer)?;
+            e @ b"note" => {
+                let text = parse_text!(e, reader, buffer);
                 if note.replace(text).is_some() {
                     return Err(Error::DuplicateElement("note", "ligandPart"))
                 }
             },
-            b"label" => {
-                let text = reader.read_text(b"label", buffer)?;
+            e @ b"label" => {
+                let text = parse_text!(e, reader, buffer);
                 if label.replace(text).is_some() {
                     return Err(Error::DuplicateElement("label", "ligandPart"))
                 }
             },
-            b"name" => {
-                let text = reader.read_text(b"name", buffer)?;
+            e @ b"name" => {
+                let text = parse_text!(e, reader, buffer);
                 if optname.replace(text).is_some() {
                     return Err(Error::DuplicateElement("name", "ligandPart"))
                 }

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -41,15 +42,15 @@ impl FromXml for Reference {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"reference");
+        debug_assert_eq!(event.local_name().as_ref(), b"reference");
 
         let mut sources = Vec::new();
         let mut scope = Vec::new();
         let mut optcit = None;
 
         parse_inner! {event, reader, buffer,
-            b"scope" => {
-                scope.push(reader.read_text(b"scope", buffer)?);
+            e @ b"scope" => {
+                scope.push(parse_text!(e, reader, buffer));
             },
             e @ b"citation" => {
                 let citation = FromXml::from_xml(&e, reader, buffer)?;
@@ -69,7 +70,7 @@ impl FromXml for Reference {
         reference.evidences = get_evidences(reader, &attr)?;
         reference.key = attr
             .get(&b"key"[..])
-            .map(|a| a.unescape_and_decode_value(reader))
+            .map(|a| a.decode_and_unescape_value(reader))
             .ok_or(Error::MissingAttribute("key", "reference"))?
             .map(|x| usize::from_str(&x))??;
 
@@ -143,7 +144,7 @@ impl FromXml for Citation {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"citation");
+        debug_assert_eq!(event.local_name().as_ref(), b"citation");
 
         use self::CitationType::*;
         use self::Creator::*;
@@ -159,48 +160,45 @@ impl FromXml for Citation {
 
         // update attributes on citation (TODO)
         // citation.date = attr.get(&b"date"[..])
-        //     .map(|v| v.unescape_and_decode_value(&mut self.xml))
+        //     .map(|v| v.decode_and_unescape_value(&mut self.xml))
         //     .transpose()?;
         citation.name = attr
             .get(&b"name"[..])
-            .map(|v| v.unescape_and_decode_value(reader))
-            .transpose()?;
+            .map(|v| v.decode_and_unescape_value(reader))
+            .transpose()?
+            .map(Cow::into_owned);
 
         // update citation with children elements
         parse_inner! {event, reader, buffer,
             e @ b"authorList" => {
                 parse_inner!{e, reader, buffer,
-                    b"person" => {
-                        let p = reader.read_text(b"person", buffer)
-                            .map(Person)?;
+                    e @ b"person" => {
+                        let p = Person(parse_text!(e, reader, buffer));
                         citation.authors.push(p);
                     },
-                    b"consortium" => {
-                        let c = reader.read_text(b"consortium", buffer)
-                            .map(Consortium)?;
+                    e @ b"consortium" => {
+                        let c = Consortium(parse_text!(e, reader, buffer));
                         citation.authors.push(c);
                     }
                 }
             },
             e @ b"editorList" => {
                 parse_inner!{e, reader, buffer,
-                    b"person" => {
-                        let p = reader.read_text(b"person", buffer)
-                            .map(Person)?;
+                    e @ b"person" => {
+                        let p = Person(parse_text!(e, reader, buffer));
                         citation.editors.push(p);
                     },
-                    b"consortium" => {
-                        let c = reader.read_text(b"consortium", buffer)
-                            .map(Consortium)?;
+                    e @ b"consortium" => {
+                        let c = Consortium(parse_text!(e, reader, buffer));
                         citation.editors.push(c);
                     }
                 }
             },
-            b"title" => {
-                citation.titles.push(reader.read_text(b"title", buffer)?);
+            e @ b"title" => {
+                citation.titles.push(parse_text!(e, reader, buffer));
             },
-            b"locator" => {
-                citation.locators.push(reader.read_text(b"locator", buffer)?);
+            e @ b"locator" => {
+                citation.locators.push(parse_text!(e, reader, buffer));
             },
             e @ b"dbReference" => {
                 citation.db_references.push(FromXml::from_xml(&e, reader, buffer)?);
@@ -283,32 +281,32 @@ impl FromXml for Vec<Source> {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"source");
+        debug_assert_eq!(event.local_name().as_ref(), b"source");
 
         use self::SourceType::*;
 
         let mut sources = Vec::new();
         parse_inner! {event, reader, buffer,
             e @ b"strain" => {
-                let value = reader.read_text(b"strain", buffer)?;
+                let value = parse_text!(e, reader, buffer);
                 let evidences = attributes_to_hashmap(&e)
                     .and_then(|a| get_evidences(reader, &a))?;
                 sources.push(Source::with_evidences(value, Strain, evidences));
             },
             e @ b"plasmid" => {
-                let value = reader.read_text(b"plasmid", buffer)?;
+                let value = parse_text!(e, reader, buffer);
                 let evidences = attributes_to_hashmap(&e)
                     .and_then(|a| get_evidences(reader, &a))?;
                 sources.push(Source::with_evidences(value, Plasmid, evidences));
             },
             e @ b"transposon" => {
-                let value = reader.read_text(b"transposon", buffer)?;
+                let value = parse_text!(e, reader, buffer);
                 let evidences = attributes_to_hashmap(&e)
                     .and_then(|a| get_evidences(reader, &a))?;
                 sources.push(Source::with_evidences(value, Transposon, evidences));
             },
             e @ b"tissue" => {
-                let value = reader.read_text(b"tissue", buffer)?;
+                let value = parse_text!(e, reader, buffer);
                 let evidences = attributes_to_hashmap(&e)
                     .and_then(|a| get_evidences(reader, &a))?;
                 sources.push(Source::with_evidences(value, Tissue, evidences));

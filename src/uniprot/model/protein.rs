@@ -44,24 +44,24 @@ impl FromXml for Protein {
                 // TODO: proper fix to avoid nested `domain` in `component`
                 protein.domains.push(Self::from_xml(&e, reader, buffer)?.name);
             },
-            b"allergenName" => {
-                let value = reader.read_text(b"allergenName", buffer)?;
+            e @ b"allergenName" => {
+                let value = parse_text!(e, reader, buffer);
                 if protein.name.allergen.replace(value).is_some() {
                     return Err(Error::DuplicateElement("allergen", "protein"));
                 }
             },
-            b"biotechName" => {
-                let value = reader.read_text(b"biotechName", buffer)?;
+            e @ b"biotechName" => {
+                let value = parse_text!(e, reader, buffer);
                 if protein.name.biotech.replace(value).is_some() {
                     return Err(Error::DuplicateElement("biotech", "protein"));
                 }
             },
-            b"cdAntigenName" => {
-                let value = reader.read_text(b"cdAntigenName", buffer)?;
+            e @ b"cdAntigenName" => {
+                let value = parse_text!(e, reader, buffer);
                 protein.name.cd_antigen.push(value);
             },
-            b"innName" => {
-                let value = reader.read_text(b"innName", buffer)?;
+            e @ b"innName" => {
+                let value = parse_text!(e, reader, buffer);
                 protein.name.inn.push(value);
 
             }
@@ -100,14 +100,14 @@ impl FromXml for Name {
         let mut group = Self::default();
 
         parse_inner! {event, reader, buffer,
-            b"fullName" => {
-                group.full = reader.read_text(b"fullName", buffer)?;
+            e @ b"fullName" => {
+                group.full = parse_text!(e, reader, buffer);
             },
-            b"shortName" => {
-                group.short.push(reader.read_text(b"shortName", buffer)?);
+            e @ b"shortName" => {
+                group.short.push(parse_text!(e, reader, buffer));
             },
-            b"ecNumber" => {
-                group.ec_number.push(reader.read_text(b"ecNumber", buffer)?);
+            e @ b"ecNumber" => {
+                group.ec_number.push(parse_text!(e, reader, buffer));
             }
         };
 
@@ -152,8 +152,8 @@ impl FromXml for ProteinExistence {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"proteinExistence");
-        reader.read_to_end(event.local_name(), buffer)?;
+        debug_assert_eq!(event.local_name().as_ref(), b"proteinExistence");
+        reader.read_to_end_into(event.name(), buffer)?;
         decode_attribute(event, reader, "type", "proteinExistence")
     }
 }

@@ -24,15 +24,15 @@ impl FromXml for Cofactor {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(b"cofactor", event.local_name());
+        debug_assert_eq!(event.local_name().as_ref(), b"cofactor");
 
         let attr = attributes_to_hashmap(event)?;
         let mut optname = None;
         let mut optdbref = None;
 
         parse_inner! {event, reader, buffer,
-            b"name" => {
-                let name = reader.read_text(b"name", buffer)?;
+            e @ b"name" => {
+                let name = parse_text!(e, reader, buffer);
                 if optname.replace(name).is_some() {
                     return Err(Error::DuplicateElement("name", "cofactor"));
                 }

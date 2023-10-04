@@ -22,18 +22,18 @@ impl FromXml for SubcellularLocation {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"subcellularLocation");
+        debug_assert_eq!(event.local_name().as_ref(), b"subcellularLocation");
 
         let mut subloc = SubcellularLocation::default();
         parse_inner! {event, reader, buffer,
-            b"location" => {
-                subloc.locations.push(reader.read_text(b"location", buffer)?);
+            e @ b"location" => {
+                subloc.locations.push(parse_text!(e, reader, buffer));
             },
-            b"topology" => {
-                subloc.topologies.push(reader.read_text(b"topology", buffer)?);
+            e @ b"topology" => {
+                subloc.topologies.push(parse_text!(e, reader, buffer));
             },
-            b"orientation" => {
-                subloc.orientations.push(reader.read_text(b"orientation", buffer)?);
+            e @ b"orientation" => {
+                subloc.orientations.push(parse_text!(e, reader, buffer));
             }
         }
 

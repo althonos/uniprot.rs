@@ -29,7 +29,10 @@ impl FromXml for Organism {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert!(event.local_name() == b"organism" || event.local_name() == b"organismHost");
+        debug_assert!(
+            event.local_name().as_ref() == b"organism"
+                || event.local_name().as_ref() == b"organismHost"
+        );
 
         let attr = attributes_to_hashmap(event)?;
 
@@ -71,9 +74,9 @@ impl FromXml for Name {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"name");
+        debug_assert_eq!(event.local_name().as_ref(), b"name");
 
-        let value = reader.read_text(b"name", buffer)?;
+        let value = parse_text!(event, reader, buffer);
         let ty = decode_attribute(event, reader, "type", "name")?;
         Ok(Name::new(value, ty))
     }
@@ -115,12 +118,12 @@ impl FromXml for Lineage {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"lineage");
+        debug_assert_eq!(event.local_name().as_ref(), b"lineage");
 
         let mut lineage = Lineage::default();
         parse_inner! {event, reader, buffer,
-            b"taxon" => {
-                lineage.taxons.push(reader.read_text(b"taxon", buffer)?);
+            e @ b"taxon" => {
+                lineage.taxons.push(parse_text!(e, reader, buffer));
             }
         }
 

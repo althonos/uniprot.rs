@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::str::FromStr;
 
@@ -26,7 +27,7 @@ impl FromXml for Disease {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"disease");
+        debug_assert_eq!(event.local_name().as_ref(), b"disease");
 
         let mut optname = None;
         let mut optdesc = None;
@@ -35,25 +36,31 @@ impl FromXml for Disease {
 
         let id = event
             .attributes()
-            .find(|x| x.is_err() || x.as_ref().map(|a| a.key == b"id").unwrap_or_default())
+            .find(|x| {
+                x.is_err()
+                    || x.as_ref()
+                        .map(|a| a.key.as_ref() == b"id")
+                        .unwrap_or_default()
+            })
             .ok_or(Error::MissingAttribute("id", "disease"))??
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
 
         parse_inner! {event, reader, buffer,
-            b"name" => {
-                let name = reader.read_text(b"name", buffer)?;
+            e @ b"name" => {
+                let name = parse_text!(e, reader, buffer);
                 if optname.replace(name).is_some() {
                     return Err(Error::DuplicateElement("name", "disease"));
                 }
             },
-            b"acronym" => {
-                let acronym = reader.read_text(b"acronym", buffer)?;
+            e @ b"acronym" => {
+                let acronym = parse_text!(e, reader, buffer);
                 if optacro.replace(acronym).is_some() {
                     return Err(Error::DuplicateElement("acronym", "disease"));
                 }
             },
-            b"description" => {
-                let description = reader.read_text(b"description", buffer)?;
+            e @ b"description" => {
+                let description = parse_text!(e, reader, buffer);
                 if optdesc.replace(description).is_some() {
                     return Err(Error::DuplicateElement("description", "disease"));
                 }

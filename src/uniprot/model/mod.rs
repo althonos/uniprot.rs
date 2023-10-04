@@ -120,7 +120,7 @@ impl FromXml for Entry {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"entry");
+        debug_assert_eq!(event.local_name().as_ref(), b"entry");
 
         let attr = attributes_to_hashmap(event)?;
         let dataset = match attr.get(&b"dataset"[..]).map(|a| &*a.value) {
@@ -141,11 +141,11 @@ impl FromXml for Entry {
         entry.created = decode_attribute(event, reader, "created", "entry")?;
         entry.version = decode_attribute(event, reader, "version", "entry")?;
         parse_inner! {event, reader, buffer,
-            b"accession" => {
-                entry.accessions.push(reader.read_text(b"accession", buffer)?);
+            e @ b"accession" => {
+                entry.accessions.push(parse_text!(e, reader, buffer));
             },
-            b"name" => {
-                entry.names.push(reader.read_text(b"name", buffer)?);
+            e @ b"name" => {
+                entry.names.push(parse_text!(e, reader, buffer));
             },
             e @ b"protein" => {
                 entry.protein = FromXml::from_xml(&e, reader, buffer)?;

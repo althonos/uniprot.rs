@@ -53,15 +53,15 @@ impl FromXml for Reaction {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"reaction");
+        debug_assert_eq!(event.local_name().as_ref(), b"reaction");
 
         let attr = attributes_to_hashmap(event)?;
         let mut db_references = Vec::new();
         let mut opttext = None;
 
         parse_inner! {event, reader, buffer,
-            b"text" => {
-                let text = reader.read_text(b"text", buffer)?;
+            e @ b"text" => {
+                let text = parse_text!(e, reader, buffer);
                 if opttext.replace(text).is_some() {
                     return Err(Error::DuplicateElement("text", "reaction"));
                 }
@@ -97,7 +97,7 @@ impl FromXml for PhysiologicalReaction {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"physiologicalReaction");
+        debug_assert_eq!(event.local_name().as_ref(), b"physiologicalReaction");
 
         use self::Direction::*;
 

@@ -37,7 +37,7 @@ impl FromXml for GeneLocation {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"geneLocation");
+        debug_assert_eq!(event.local_name().as_ref(), b"geneLocation");
 
         let mut geneloc = decode_attribute(event, reader, "type", "geneLocation").map(Self::new)?;
 
@@ -115,9 +115,9 @@ impl FromXml for LocationName {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"name");
+        debug_assert_eq!(event.local_name().as_ref(), b"name");
 
-        let value = reader.read_text(b"name", buffer)?;
+        let value = parse_text!(event, reader, buffer);
         let status = match decode_attribute(event, reader, "status", "name") {
             Err(Error::MissingAttribute(_, _)) => Default::default(),
             Err(err) => return Err(err),

@@ -21,18 +21,18 @@ impl FromXml for Sequence {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"sequence");
+        debug_assert_eq!(event.local_name().as_ref(), b"sequence");
 
         // decode attributes
         let length = decode_attribute(event, reader, "length", "sequence")?;
         let checksum = extract_attribute(event, "checksum")?
-            .map(|x| x.unescape_and_decode_value(reader))
+            .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|x| u64::from_str_radix(&x, 16))
             .ok_or(Error::MissingAttribute("checksum", "sequence"))??;
 
         // extract `sequence` element
-        let sequence = reader.read_text(b"sequence", buffer)?;
+        let sequence = parse_text!(event, reader, buffer);
         Ok(Sequence {
             sequence,
             length,
