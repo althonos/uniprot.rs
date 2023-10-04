@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 
 use quick_xml::events::BytesStart;
@@ -19,16 +20,18 @@ impl FromXml for InterproReference {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        assert_eq!(event.local_name(), b"ipr");
+        assert_eq!(event.local_name().as_ref(), b"ipr");
 
         let name = extract_attribute(event, "name")?
             .ok_or(Error::MissingAttribute("name", "signatureSequenceMatch"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
         let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "signatureSequenceMatch"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
 
-        reader.read_to_end(event.local_name(), buffer)?;
+        reader.read_to_end_into(event.name(), buffer)?;
         Ok(InterproReference { name, id })
     }
 }

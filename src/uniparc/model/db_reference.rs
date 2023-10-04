@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 
 use quick_xml::events::BytesStart;
@@ -33,7 +34,7 @@ impl FromXml for DbReference {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        assert_eq!(event.local_name(), b"dbReference");
+        assert_eq!(event.local_name().as_ref(), b"dbReference");
 
         let version_i = decode_attribute(event, reader, "version_i", "dbReference")?;
         let version = decode_opt_attribute(event, reader, "version", "dbReference")?;
@@ -44,15 +45,18 @@ impl FromXml for DbReference {
         let ty = attributes
             .get(&b"type"[..])
             .ok_or(Error::MissingAttribute("type", "dbReference"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
         let id = attributes
             .get(&b"id"[..])
             .ok_or(Error::MissingAttribute("id", "dbReference"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
         let active = attributes
             .get(&b"id"[..])
             .ok_or(Error::MissingAttribute("active", "dbReference"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
 
         let mut properties = Vec::new();
         parse_inner! {event, reader, buffer,

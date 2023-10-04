@@ -163,7 +163,7 @@ extern crate url;
 pub mod parser;
 mod common;
 pub mod error;
-// pub mod uniparc;
+pub mod uniparc;
 pub mod uniprot;
 // pub mod uniref;
 

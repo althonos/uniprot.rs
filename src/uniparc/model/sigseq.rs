@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::BufRead;
 
 use quick_xml::events::BytesStart;
@@ -26,17 +27,19 @@ impl FromXml for SignatureSequenceMatch {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        assert_eq!(event.local_name(), b"signatureSequenceMatch");
+        assert_eq!(event.local_name().as_ref(), b"signatureSequenceMatch");
 
         let database = extract_attribute(event, "database")?
             .ok_or(Error::MissingAttribute(
                 "database",
                 "signatureSequenceMatch",
             ))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
         let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "signatureSequenceMatch"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
 
         let mut interpro = None;
         let mut locations = Vec::new();

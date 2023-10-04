@@ -20,6 +20,7 @@ pub use crate::common::date::Date;
 pub use crate::common::property::Property;
 pub use crate::common::sequence::Sequence;
 
+use std::borrow::Cow;
 use std::io::BufRead;
 use std::iter::FromIterator;
 use std::ops::Deref;
@@ -53,19 +54,20 @@ impl FromXml for Entry {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        debug_assert_eq!(event.local_name(), b"entry");
+        debug_assert_eq!(event.local_name().as_ref(), b"entry");
 
         let dataset = extract_attribute(event, "dataset")?
             .ok_or(Error::MissingAttribute("dataset", "entry"))?
-            .unescape_and_decode_value(reader)?;
+            .decode_and_unescape_value(reader)
+            .map(Cow::into_owned)?;
 
         let mut accession = None;
         let mut sequence = None;
         let mut db_references = Vec::new();
         let mut signature_sequence_matches = Vec::new();
         parse_inner! {event, reader, buffer,
-            b"accession" => {
-                if accession.replace(reader.read_text(b"accession", buffer)?).is_some() {
+            e @ b"accession" => {
+                if accession.replace(parse_text!(e, reader, buffer)).is_some() {
                     return Err(Error::DuplicateElement("accession", "entry"));
                 }
             },
