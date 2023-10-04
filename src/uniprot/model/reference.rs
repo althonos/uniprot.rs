@@ -9,6 +9,7 @@ use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
@@ -167,30 +168,51 @@ impl FromXml for Citation {
             .map(|v| v.decode_and_unescape_value(reader))
             .transpose()?
             .map(Cow::into_owned);
+        citation.db = attr
+            .get(&b"db"[..])
+            .map(|v| v.decode_and_unescape_value(reader))
+            .transpose()?
+            .map(Cow::into_owned);
 
         // update citation with children elements
         parse_inner! {event, reader, buffer,
             e @ b"authorList" => {
                 parse_inner!{e, reader, buffer,
-                    e @ b"person" => {
-                        let p = Person(parse_text!(e, reader, buffer));
-                        citation.authors.push(p);
+                    x @ b"person" => {
+                        reader.read_to_end_into(x.name(), buffer)?;
+                        let name = extract_attribute(&x, "name")?
+                            .ok_or(Error::MissingAttribute("name", "person"))?
+                            .decode_and_unescape_value(reader)?
+                            .into_owned();
+                        citation.authors.push(Person(name));
                     },
-                    e @ b"consortium" => {
-                        let c = Consortium(parse_text!(e, reader, buffer));
-                        citation.authors.push(c);
+                    x @ b"consortium" => {
+                        reader.read_to_end_into(x.name(), buffer)?;
+                        let name = extract_attribute(&x, "name")?
+                            .ok_or(Error::MissingAttribute("name", "consortium"))?
+                            .decode_and_unescape_value(reader)?
+                            .into_owned();
+                        citation.authors.push(Consortium(name));
                     }
                 }
             },
             e @ b"editorList" => {
                 parse_inner!{e, reader, buffer,
-                    e @ b"person" => {
-                        let p = Person(parse_text!(e, reader, buffer));
-                        citation.editors.push(p);
+                    x @ b"person" => {
+                        reader.read_to_end_into(x.name(), buffer)?;
+                        let name = extract_attribute(&x, "name")?
+                            .ok_or(Error::MissingAttribute("name", "person"))?
+                            .decode_and_unescape_value(reader)?
+                            .into_owned();
+                        citation.authors.push(Person(name));
                     },
-                    e @ b"consortium" => {
-                        let c = Consortium(parse_text!(e, reader, buffer));
-                        citation.editors.push(c);
+                    x @ b"consortium" => {
+                        reader.read_to_end_into(x.name(), buffer)?;
+                        let name = extract_attribute(&x, "name")?
+                            .ok_or(Error::MissingAttribute("name", "consortium"))?
+                            .decode_and_unescape_value(reader)?
+                            .into_owned();
+                        citation.authors.push(Consortium(name));
                     }
                 }
             },
