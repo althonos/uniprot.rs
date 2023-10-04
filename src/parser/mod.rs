@@ -247,7 +247,7 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
             }
         }
 
-        //
+        // start producer thread
         let producer = Producer {
             s_text,
             threads,
@@ -256,7 +256,7 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
             alive: Arc::new(AtomicBool::new(false)),
         };
 
-        // create the consumer and the workers
+        // create the worker threads
         let mut consumers = Vec::with_capacity(threads);
         for _ in 0..threads {
             let consumer = Consumer::new(r_text.clone(), s_item.clone());
@@ -289,18 +289,18 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
 
         loop {
             // poll for parsed entries to return
-            match self.r_item.try_recv() {
+            match self.r_item.recv_timeout(SLEEP_DURATION) {
                 // item is found: simply return it
                 Ok(item) => return Some(item),
                 // empty queue after all the threads were joined: we are done
-                Err(TryRecvError::Empty) if self.state == State::Waiting => {
+                Err(RecvTimeoutError::Timeout) if self.state == State::Waiting => {
                     self.state = State::Finished;
                     return None;
                 }
                 // empty queue in any other state: just do something else
-                Err(TryRecvError::Empty) => (),
+                Err(RecvTimeoutError::Timeout) => (),
                 // queue was disconnected: stop and return an error
-                Err(TryRecvError::Disconnected) => {
+                Err(RecvTimeoutError::Disconnected) => {
                     if self.state != State::Finished {
                         self.state = State::Finished;
                         return Some(Err(Error::DisconnectedChannel));
