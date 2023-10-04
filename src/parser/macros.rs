@@ -25,7 +25,7 @@ macro_rules! parse_inner {
                     let e = String::from_utf8_lossy($event.local_name().as_ref()).to_string();
                     return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
-                Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
+                Ok(Event::End(ref e)) if e.name() == $event.name() => {
                     break;
                 }
                 Ok(Event::End(ref e)) => {
@@ -116,7 +116,7 @@ macro_rules! parse_text {
                     let e = String::from_utf8_lossy($event.local_name().as_ref()).to_string();
                     return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
-                Ok(Event::End(ref e)) if e.local_name() == $event.local_name() => {
+                Ok(Event::End(ref e)) if e.name() == $event.name() => {
                     break;
                 }
                 Ok(Event::End(ref e)) => {
