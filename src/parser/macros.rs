@@ -106,7 +106,7 @@ macro_rules! parse_text {
                         txt.push_str(&e.unescape()?);
                     }
                 }
-                Ok(Event::Start(ref x)) => {
+                Ok(Event::Start(_)) => {
                     return Err(Error::from(XmlError::TextNotFound));
                 }
                 Err(e) => {
