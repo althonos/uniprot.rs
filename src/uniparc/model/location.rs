@@ -25,7 +25,7 @@ impl FromXml for Location {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        assert_eq!(event.local_name().as_ref(), b"lcn");
+        debug_assert_eq!(event.local_name().as_ref(), b"lcn");
 
         let start = decode_attribute(event, reader, "start", "lcn")?;
         let end = decode_attribute(event, reader, "end", "lcn")?;

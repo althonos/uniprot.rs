@@ -27,7 +27,7 @@ impl FromXml for SignatureSequenceMatch {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        assert_eq!(event.local_name().as_ref(), b"signatureSequenceMatch");
+        debug_assert_eq!(event.local_name().as_ref(), b"signatureSequenceMatch");
 
         let database = extract_attribute(event, "database")?
             .ok_or(Error::MissingAttribute(

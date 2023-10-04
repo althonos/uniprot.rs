@@ -20,7 +20,7 @@ impl FromXml for InterproReference {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        assert_eq!(event.local_name().as_ref(), b"ipr");
+        debug_assert_eq!(event.local_name().as_ref(), b"ipr");
 
         let name = extract_attribute(event, "name")?
             .ok_or(Error::MissingAttribute("name", "signatureSequenceMatch"))?

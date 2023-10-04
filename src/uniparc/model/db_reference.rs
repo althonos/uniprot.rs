@@ -34,7 +34,7 @@ impl FromXml for DbReference {
         reader: &mut Reader<B>,
         buffer: &mut Vec<u8>,
     ) -> Result<Self, Error> {
-        assert_eq!(event.local_name().as_ref(), b"dbReference");
+        debug_assert_eq!(event.local_name().as_ref(), b"dbReference");
 
         let version_i = decode_attribute(event, reader, "version_i", "dbReference")?;
         let version = decode_opt_attribute(event, reader, "version", "dbReference")?;
