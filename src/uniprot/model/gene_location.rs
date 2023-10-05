@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -91,18 +92,18 @@ impl FromStr for LocationType {
 
 #[derive(Debug, Clone)]
 pub struct LocationName {
-    pub value: String,
+    pub value: ShortString,
     pub status: LocationStatus,
 }
 
 impl LocationName {
     /// Create a new `LocationName` with `status` set to `Known`.
-    pub fn new(value: String) -> Self {
+    pub fn new(value: ShortString) -> Self {
         Self::with_status(value, Default::default())
     }
 
     /// Create a new `LocationName` with a given status.
-    pub fn with_status(value: String, status: LocationStatus) -> Self {
+    pub fn with_status(value: ShortString, status: LocationStatus) -> Self {
         Self { value, status }
     }
 }

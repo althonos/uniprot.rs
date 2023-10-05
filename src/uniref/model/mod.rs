@@ -14,25 +14,28 @@ pub use crate::common::date::Date;
 pub use crate::common::property::Property;
 pub use crate::common::sequence::Sequence;
 
-use crate::error::Error;
-use crate::parser::utils::decode_attribute;
-use crate::parser::FromXml;
-use crate::parser::UniprotDatabase;
+use std::ops::Deref;
+use std::ops::DerefMut;
+
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 use std::io::BufRead;
 use std::iter::FromIterator;
-use std::ops::Deref;
-use std::ops::DerefMut;
+
+use crate::common::ShortString;
+use crate::error::Error;
+use crate::parser::utils::decode_attribute;
+use crate::parser::FromXml;
+use crate::parser::UniprotDatabase;
 
 // ---------------------------------------------------------------------------
 
 /// A UniRef entry.
 #[derive(Debug, Clone)]
 pub struct Entry {
-    pub id: String,
+    pub id: ShortString,
     pub updated: Date,
-    pub name: String,
+    pub name: ShortString,
     pub properties: Vec<Property>,
     pub representative_member: Member,
     pub members: Vec<Member>,

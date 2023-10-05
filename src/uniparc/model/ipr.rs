@@ -4,14 +4,15 @@ use std::io::BufRead;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 
 #[derive(Debug, Clone)]
 pub struct InterproReference {
-    pub name: String,
-    pub id: String,
+    pub name: ShortString,
+    pub id: ShortString,
 }
 
 impl FromXml for InterproReference {
@@ -25,11 +26,11 @@ impl FromXml for InterproReference {
         let name = extract_attribute(event, "name")?
             .ok_or(Error::MissingAttribute("name", "signatureSequenceMatch"))?
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(ShortString::from)?;
         let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "signatureSequenceMatch"))?
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(ShortString::from)?;
 
         reader.read_to_end_into(event.name(), buffer)?;
         Ok(InterproReference { name, id })

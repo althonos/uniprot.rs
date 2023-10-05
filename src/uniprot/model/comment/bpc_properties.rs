@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::FromXml;
 
@@ -11,18 +12,18 @@ use crate::parser::FromXml;
 pub struct BiophysicochemicalProperties {
     pub absorption: Option<Absorption>,
     pub kinetics: Option<Kinetics>,
-    pub ph_dependence: Option<String>,   // TODO: EvidenceString
-    pub redox_potential: Option<String>, // TODO: EvidenceString
-    pub temperature_dependence: Option<String>,
+    pub ph_dependence: Option<ShortString>, // TODO: EvidenceShortString
+    pub redox_potential: Option<ShortString>, // TODO: EvidenceShortString
+    pub temperature_dependence: Option<ShortString>,
 }
 
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Default, Clone)]
 pub struct Absorption {
-    pub max: Option<String>,  // FIXME: evidence string
-    pub min: Option<String>,  // FIXME: evidence string
-    pub text: Option<String>, // FIXME: evidence string
+    pub max: Option<ShortString>,  // FIXME: evidence ShortString
+    pub min: Option<ShortString>,  // FIXME: evidence ShortString
+    pub text: Option<ShortString>, // FIXME: evidence ShortString
 }
 
 impl FromXml for Absorption {
@@ -63,9 +64,9 @@ impl FromXml for Absorption {
 
 #[derive(Debug, Default, Clone)]
 pub struct Kinetics {
-    pub km: Vec<String>,      // FIXME: evidence string
-    pub vmax: Vec<String>,    // FIXME: evidence string
-    pub text: Option<String>, // FIXME: evidence string
+    pub km: Vec<ShortString>,      // FIXME: evidence ShortString
+    pub vmax: Vec<ShortString>,    // FIXME: evidence ShortString
+    pub text: Option<ShortString>, // FIXME: evidence ShortString
 }
 
 impl FromXml for Kinetics {

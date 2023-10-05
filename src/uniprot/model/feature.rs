@@ -5,10 +5,11 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
@@ -21,19 +22,19 @@ use super::ligand_part::LigandPart;
 pub struct Feature {
     // fields
     /// Describes the original sequence in annotations that describe natural or artifical sequence variations.
-    pub original: Option<String>,
+    pub original: Option<ShortString>,
     /// Describes the variant sequence in annotations that describe natural or artifical sequence variations.
-    pub variation: Vec<String>,
+    pub variation: Vec<ShortString>,
     /// Describes the sequence coordinates of the annotation.
     pub location: FeatureLocation,
 
     // attributes
     /// Describes the type of a sequence annotation
     pub ty: FeatureType,
-    pub id: Option<String>,
-    pub description: Option<String>,
+    pub id: Option<ShortString>,
+    pub description: Option<ShortString>,
     pub evidences: Vec<usize>,
-    pub reference: Option<String>,
+    pub reference: Option<ShortString>,
     pub ligand: Option<Ligand>,
     pub ligand_part: Option<LigandPart>,
 }
@@ -66,8 +67,8 @@ impl FromXml for Feature {
         use self::FeatureType::*;
 
         // extract the location and variants
-        let mut variation: Vec<String> = Vec::new();
-        let mut original: Option<String> = None;
+        let mut variation: Vec<ShortString> = Vec::new();
+        let mut original: Option<ShortString> = None;
         let mut optloc: Option<FeatureLocation> = None;
         let mut optligand: Option<Ligand> = None;
         let mut optligandpart: Option<LigandPart> = None;
@@ -109,15 +110,15 @@ impl FromXml for Feature {
         feature.id = extract_attribute(event, "id")?
             .map(|a| a.decode_and_unescape_value(reader))
             .transpose()?
-            .map(Cow::into_owned);
+            .map(From::from);
         feature.description = extract_attribute(event, "description")?
             .map(|a| a.decode_and_unescape_value(reader))
             .transpose()?
-            .map(Cow::into_owned);
+            .map(From::from);
         feature.reference = extract_attribute(event, "ref")?
             .map(|a| a.decode_and_unescape_value(reader))
             .transpose()?
-            .map(Cow::into_owned);
+            .map(From::from);
         feature.evidences = get_evidences(reader, &event)?;
         feature.original = original;
         feature.variation = variation;

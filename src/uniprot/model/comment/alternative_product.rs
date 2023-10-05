@@ -5,6 +5,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -57,10 +58,10 @@ impl FromXml for Event {
 
 #[derive(Debug, Clone)]
 pub struct Isoform {
-    pub ids: Vec<String>,
-    pub names: Vec<String>,
+    pub ids: Vec<ShortString>,
+    pub names: Vec<ShortString>,
     pub sequence: IsoformSequence,
-    pub texts: Vec<String>,
+    pub texts: Vec<ShortString>,
 }
 
 impl Isoform {
@@ -153,7 +154,7 @@ impl FromXml for IsoformSequence {
         let reference = extract_attribute(event, "ref")?
             .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
-            .map(Cow::into_owned);
+            .map(From::from);
         decode_attribute(event, reader, "type", "sequence")
             .map(|ty| Self::with_reference(ty, reference))
     }

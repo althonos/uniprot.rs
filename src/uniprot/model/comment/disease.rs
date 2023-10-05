@@ -5,6 +5,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -13,10 +14,10 @@ use super::super::db_reference::DbReference;
 
 #[derive(Debug, Clone)]
 pub struct Disease {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub acronym: String,
+    pub id: ShortString,
+    pub name: ShortString,
+    pub description: ShortString,
+    pub acronym: ShortString,
     pub db_reference: DbReference,
 }
 
@@ -43,7 +44,7 @@ impl FromXml for Disease {
             })
             .ok_or(Error::MissingAttribute("id", "disease"))??
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(From::from)?;
 
         parse_inner! {event, reader, buffer,
             e @ b"name" => {

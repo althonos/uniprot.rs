@@ -1,3 +1,5 @@
+use crate::common::ShortString;
+
 #[derive(Debug, Default, Clone)]
 pub struct MassSpectrometry {
     pub mass: Option<f64>,

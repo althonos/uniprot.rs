@@ -4,10 +4,11 @@ use std::io::BufRead;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::decode_attribute;
-use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_opt_attribute;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
@@ -17,10 +18,10 @@ use super::Property;
 #[derive(Debug, Clone)]
 pub struct DbReference {
     // attributes
-    pub ty: String,
-    pub id: String,
+    pub ty: ShortString,
+    pub id: ShortString,
     pub version_i: usize,
-    pub active: String,
+    pub active: ShortString,
     pub version: Option<usize>,
     pub created: Option<Date>,
     pub last: Option<Date>,
@@ -44,15 +45,15 @@ impl FromXml for DbReference {
         let ty = extract_attribute(event, "type")?
             .ok_or(Error::MissingAttribute("type", "dbReference"))?
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(ShortString::from)?;
         let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "dbReference"))?
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(ShortString::from)?;
         let active = extract_attribute(event, "active")?
             .ok_or(Error::MissingAttribute("active", "dbReference"))?
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(ShortString::from)?;
 
         let mut properties = Vec::new();
         parse_inner! {event, reader, buffer,

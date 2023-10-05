@@ -5,6 +5,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -20,7 +21,7 @@ pub struct Reference {
     pub key: usize,
     pub citation: Citation,
     pub evidences: Vec<usize>,
-    pub scope: Vec<String>,
+    pub scope: Vec<ShortString>,
     pub sources: Vec<Source>,
 }
 
@@ -86,30 +87,30 @@ pub struct Citation {
     pub ty: CitationType,
     // date: Option<NaiveDate>,
     /// Describes the name of an (online) journal or book.
-    pub name: Option<String>,
+    pub name: Option<ShortString>,
     /// Describes the volume of a journal or book.
-    pub volume: Option<String>,
+    pub volume: Option<ShortString>,
     /// Describes the first page of an article.
-    pub first: Option<String>,
+    pub first: Option<ShortString>,
     /// Describes the last page of an article.
-    pub last: Option<String>,
+    pub last: Option<ShortString>,
     /// Describes the publisher of a book.
-    pub publisher: Option<String>,
+    pub publisher: Option<ShortString>,
     /// Describes the city where a book was published.
-    pub city: Option<String>,
+    pub city: Option<ShortString>,
     /// Describes the database name of submissions.
-    pub db: Option<String>,
+    pub db: Option<ShortString>,
     /// Describes a patent number.
-    pub number: Option<String>,
+    pub number: Option<ShortString>,
     // fields
     /// Describes the title of a citation.
-    pub titles: Vec<String>,
+    pub titles: Vec<ShortString>,
     /// Describes the editors of a book (only used for books).
     pub editors: Vec<Creator>,
     /// Describes the authors of a citation.
     pub authors: Vec<Creator>,
     /// Describes the location (URL) of an online journal article
-    pub locators: Vec<String>,
+    pub locators: Vec<ShortString>,
     /// Describes cross-references to bibliography databases (MEDLINE, PubMed,
     /// AGRICOLA) or other online resources (DOI).
     pub db_references: Vec<DbReference>,
@@ -160,11 +161,11 @@ impl FromXml for Citation {
         citation.name = extract_attribute(event, "name")?
             .map(|v| v.decode_and_unescape_value(reader))
             .transpose()?
-            .map(Cow::into_owned);
+            .map(ShortString::from);
         citation.db = extract_attribute(event, "db")?
             .map(|v| v.decode_and_unescape_value(reader))
             .transpose()?
-            .map(Cow::into_owned);
+            .map(ShortString::from);
 
         // update citation with children elements
         parse_inner! {event, reader, buffer,
@@ -175,7 +176,7 @@ impl FromXml for Citation {
                         let name = extract_attribute(&x, "name")?
                             .ok_or(Error::MissingAttribute("name", "person"))?
                             .decode_and_unescape_value(reader)?
-                            .into_owned();
+                            .into();
                         citation.authors.push(Person(name));
                     },
                     x @ b"consortium" => {
@@ -183,7 +184,7 @@ impl FromXml for Citation {
                         let name = extract_attribute(&x, "name")?
                             .ok_or(Error::MissingAttribute("name", "consortium"))?
                             .decode_and_unescape_value(reader)?
-                            .into_owned();
+                            .into();
                         citation.authors.push(Consortium(name));
                     }
                 }
@@ -195,7 +196,7 @@ impl FromXml for Citation {
                         let name = extract_attribute(&x, "name")?
                             .ok_or(Error::MissingAttribute("name", "person"))?
                             .decode_and_unescape_value(reader)?
-                            .into_owned();
+                            .into();
                         citation.authors.push(Person(name));
                     },
                     x @ b"consortium" => {
@@ -203,7 +204,7 @@ impl FromXml for Citation {
                         let name = extract_attribute(&x, "name")?
                             .ok_or(Error::MissingAttribute("name", "consortium"))?
                             .decode_and_unescape_value(reader)?
-                            .into_owned();
+                            .into();
                         citation.authors.push(Consortium(name));
                     }
                 }
@@ -249,7 +250,7 @@ impl FromStr for CitationType {
             "submission" => Ok(Submission),
             "thesis" => Ok(Thesis),
             "unpublished observations" => Ok(UnpublishedObservations),
-            other => Err(InvalidValue(String::from(other))),
+            other => Err(InvalidValue(std::string::String::from(other))),
         }
     }
 }
@@ -260,9 +261,9 @@ impl FromStr for CitationType {
 /// A single author in a citation.
 pub enum Creator {
     /// The author of a citation when these are represented by a consortium.
-    Consortium(String),
+    Consortium(ShortString),
     /// The author of a citation when they are an individual.
-    Person(String),
+    Person(ShortString),
 }
 
 // ---------------------------------------------------------------------------
@@ -270,17 +271,17 @@ pub enum Creator {
 #[derive(Debug, Clone)]
 /// The source of the protein sequence according to the citation.
 pub struct Source {
-    pub value: String,
+    pub value: ShortString,
     pub ty: SourceType,
     pub evidences: Vec<usize>,
 }
 
 impl Source {
-    pub fn new(value: String, ty: SourceType) -> Self {
+    pub fn new(value: ShortString, ty: SourceType) -> Self {
         Self::with_evidences(value, ty, Vec::new())
     }
 
-    pub fn with_evidences(value: String, ty: SourceType, evidences: Vec<usize>) -> Self {
+    pub fn with_evidences(value: ShortString, ty: SourceType, evidences: Vec<usize>) -> Self {
         Self {
             value,
             ty,

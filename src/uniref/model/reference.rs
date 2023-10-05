@@ -1,18 +1,20 @@
 use std::io::BufRead;
 
+use quick_xml::events::BytesStart;
+use quick_xml::Reader;
+
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::decode_attribute;
 use crate::parser::FromXml;
-use quick_xml::events::BytesStart;
-use quick_xml::Reader;
 
 use super::Property;
 
 /// A UniRef database reference.
 #[derive(Debug, Clone)]
 pub struct Reference {
-    pub id: String,
-    pub ty: String,
+    pub id: ShortString,
+    pub ty: ShortString,
     pub properties: Vec<Property>,
 }
 

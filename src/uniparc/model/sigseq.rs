@@ -4,6 +4,7 @@ use std::io::BufRead;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
@@ -14,8 +15,8 @@ use super::Location;
 
 #[derive(Debug, Clone)]
 pub struct SignatureSequenceMatch {
-    pub database: String,
-    pub id: String,
+    pub database: ShortString,
+    pub id: ShortString,
     pub interpro: InterproReference,
     pub locations: Vec<Location>,
 }
@@ -33,12 +34,12 @@ impl FromXml for SignatureSequenceMatch {
                 "database",
                 "signatureSequenceMatch",
             ))?
-            .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .decode_and_unescape_value(reader)?
+            .into();
         let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "signatureSequenceMatch"))?
-            .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .decode_and_unescape_value(reader)?
+            .into();
 
         let mut interpro = None;
         let mut locations = Vec::new();

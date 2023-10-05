@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -55,12 +56,12 @@ impl FromXml for Organism {
 
 #[derive(Debug, Clone)]
 pub struct Name {
-    pub value: String,
+    pub value: ShortString,
     pub ty: NameType,
 }
 
 impl Name {
-    pub fn new(value: String, ty: NameType) -> Self {
+    pub fn new(value: ShortString, ty: NameType) -> Self {
         Self { value, ty }
     }
 }
@@ -106,7 +107,7 @@ impl FromStr for NameType {
 
 #[derive(Debug, Default, Clone)]
 pub struct Lineage {
-    pub taxons: Vec<String>,
+    pub taxons: Vec<ShortString>,
 }
 
 impl FromXml for Lineage {

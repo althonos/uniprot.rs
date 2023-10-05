@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -31,13 +32,13 @@ impl CatalyticActivity {
 
 #[derive(Debug, Clone)]
 pub struct Reaction {
-    pub text: String,
+    pub text: ShortString,
     pub db_references: Vec<DbReference>,
     pub evidences: Vec<usize>,
 }
 
 impl Reaction {
-    pub fn new(text: String) -> Self {
+    pub fn new(text: ShortString) -> Self {
         Self {
             text,
             db_references: Default::default(),

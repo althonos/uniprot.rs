@@ -14,23 +14,23 @@ macro_rules! parse_inner {
                     $reader.read_to_end_into(x.name(), &mut Vec::new())?;
                     unimplemented!(
                         "`{}` in `{}`",
-                        String::from_utf8_lossy(x.local_name().as_ref()),
-                        String::from_utf8_lossy($event.local_name().as_ref())
+                        std::string::String::from_utf8_lossy(x.local_name().as_ref()),
+                        std::string::String::from_utf8_lossy($event.local_name().as_ref())
                     );
                 }
                 Err(e) => {
                     return Err(Error::from(e));
                 }
                 Ok(Event::Eof) => {
-                    let e = String::from_utf8_lossy($event.local_name().as_ref()).to_string();
+                    let e = std::string::String::from_utf8_lossy($event.local_name().as_ref()).to_string();
                     return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
                 Ok(Event::End(ref e)) if e.name() == $event.name() => {
                     break;
                 }
                 Ok(Event::End(ref e)) => {
-                    let expected = String::from_utf8_lossy($event.name().as_ref()).to_string();
-                    let found = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    let expected = std::string::String::from_utf8_lossy($event.name().as_ref()).to_string();
+                    let found = std::string::String::from_utf8_lossy(e.name().as_ref()).to_string();
                     let e = XmlError::EndEventMismatch { expected, found };
                     return Err(Error::from(e));
                 }
@@ -89,7 +89,7 @@ macro_rules! parse_comment {
 #[allow(unused_macros)]
 macro_rules! parse_text {
     ( $event:expr, $reader:ident, $buffer:ident ) => {{
-        let mut txt = String::new();
+        let mut txt = crate::common::ShortString::default();
 
         loop {
             use $crate::quick_xml::events::BytesEnd;
@@ -101,7 +101,7 @@ macro_rules! parse_text {
             match $reader.read_event_into($buffer) {
                 Ok(Event::Text(ref e)) => {
                     if txt.is_empty() {
-                        txt = e.unescape()?.into_owned();
+                        txt = e.unescape()?.into();
                     } else {
                         txt.push_str(&e.unescape()?);
                     }
@@ -113,15 +113,17 @@ macro_rules! parse_text {
                     return Err(Error::from(e));
                 }
                 Ok(Event::Eof) => {
-                    let e = String::from_utf8_lossy($event.local_name().as_ref()).to_string();
+                    let e = std::string::String::from_utf8_lossy($event.local_name().as_ref())
+                        .to_string();
                     return Err(Error::from(XmlError::UnexpectedEof(e)));
                 }
                 Ok(Event::End(ref e)) if e.name() == $event.name() => {
                     break;
                 }
                 Ok(Event::End(ref e)) => {
-                    let expected = String::from_utf8_lossy($event.name().as_ref()).to_string();
-                    let found = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                    let expected =
+                        std::string::String::from_utf8_lossy($event.name().as_ref()).to_string();
+                    let found = std::string::String::from_utf8_lossy(e.name().as_ref()).to_string();
                     let e = XmlError::EndEventMismatch { expected, found };
                     return Err(Error::from(e));
                 }

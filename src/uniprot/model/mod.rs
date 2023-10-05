@@ -46,9 +46,10 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
-use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 use crate::parser::UniprotDatabase;
 
@@ -71,8 +72,8 @@ pub struct Entry {
     pub modified: Date,
     pub version: usize,
     // fields
-    pub accessions: Vec<String>, // minOccurs = 1
-    pub names: Vec<String>,      // minOccurs = 1
+    pub accessions: Vec<ShortString>, // minOccurs = 1
+    pub names: Vec<ShortString>,      // minOccurs = 1
     pub protein: Protein,
     pub genes: Vec<Gene>,
     pub organism: Organism,
@@ -125,7 +126,7 @@ impl FromXml for Entry {
         let dataset = match extract_attribute(event, "dataset")?
             .ok_or(Error::MissingAttribute("dataset", "entry"))?
             .value
-            .as_ref() 
+            .as_ref()
         {
             b"Swiss-Prot" => Dataset::SwissProt,
             b"TrEMBL" => Dataset::TrEmbl,

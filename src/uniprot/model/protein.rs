@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -77,18 +78,18 @@ pub struct Nomenclature {
     pub recommended: Option<Name>,
     pub alternative: Vec<Name>,
     pub submitted: Vec<Name>,
-    pub allergen: Option<String>, // FIXME: type should be EvidenceString?
-    pub biotech: Option<String>,
-    pub cd_antigen: Vec<String>,
-    pub inn: Vec<String>,
+    pub allergen: Option<ShortString>, // FIXME: type should be EvidenceShortString?
+    pub biotech: Option<ShortString>,
+    pub cd_antigen: Vec<ShortString>,
+    pub inn: Vec<ShortString>,
 }
 
 #[derive(Debug, Clone, Default)]
 /// A single name in use for a protein.
 pub struct Name {
-    pub full: String,
-    pub short: Vec<String>,
-    pub ec_number: Vec<String>,
+    pub full: ShortString,
+    pub short: Vec<ShortString>,
+    pub ec_number: Vec<ShortString>,
 }
 
 impl FromXml for Name {

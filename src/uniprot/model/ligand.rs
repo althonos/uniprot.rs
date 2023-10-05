@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::FromXml;
 
@@ -12,14 +13,14 @@ use super::db_reference::DbReference;
 #[derive(Debug, Clone)]
 /// Describes a ligand.
 pub struct Ligand {
-    pub name: String,
+    pub name: ShortString,
     pub db_reference: Option<DbReference>,
-    pub label: Option<String>,
-    pub note: Option<String>,
+    pub label: Option<ShortString>,
+    pub note: Option<ShortString>,
 }
 
 impl Ligand {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: ShortString) -> Self {
         Self {
             name,
             db_reference: None,
@@ -39,9 +40,9 @@ impl FromXml for Ligand {
 
         // extract the location and variants
         let mut db_reference: Option<DbReference> = None;
-        let mut label: Option<String> = None;
-        let mut note: Option<String> = None;
-        let mut optname: Option<String> = None;
+        let mut label: Option<ShortString> = None;
+        let mut note: Option<ShortString> = None;
+        let mut optname: Option<ShortString> = None;
         parse_inner! {event, reader, buffer,
             e @ b"dbReference" => {
                 let dbref = DbReference::from_xml(&e, reader, buffer)?;

@@ -5,6 +5,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -14,7 +15,7 @@ use crate::parser::FromXml;
 #[derive(Debug, Clone)]
 pub struct Conflict {
     pub ty: ConflictType,
-    pub reference: Option<String>,
+    pub reference: Option<ShortString>,
     pub sequence: Option<ConflictSequence>,
 }
 
@@ -44,7 +45,7 @@ impl FromXml for Conflict {
         conflict.reference = extract_attribute(event, "type")?
             .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
-            .map(Cow::into_owned);
+            .map(From::from);
 
         // extract `sequence` element
         parse_inner! {event, reader, buffer,
@@ -92,17 +93,17 @@ impl FromStr for ConflictType {
 
 #[derive(Debug, Clone)]
 pub struct ConflictSequence {
-    pub id: String,
+    pub id: ShortString,
     pub resource: Resource,
     pub version: Option<usize>,
 }
 
 impl ConflictSequence {
-    pub fn new(id: String, resource: Resource) -> Self {
+    pub fn new(id: ShortString, resource: Resource) -> Self {
         Self::with_version(id, resource, None)
     }
 
-    pub fn with_version<N>(id: String, resource: Resource, version: N) -> Self
+    pub fn with_version<N>(id: ShortString, resource: Resource, version: N) -> Self
     where
         N: Into<Option<usize>>,
     {
@@ -125,7 +126,7 @@ impl FromXml for ConflictSequence {
         let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "sequence"))?
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(From::from)?;
         let version = extract_attribute(event, "version")?
             .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?

@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -12,7 +13,7 @@ use super::super::db_reference::DbReference;
 
 #[derive(Debug, Default, Clone)]
 pub struct Cofactor {
-    pub name: String,
+    pub name: ShortString,
     pub db_reference: DbReference,
     pub evidences: Vec<usize>,
 }

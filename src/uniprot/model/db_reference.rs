@@ -4,20 +4,21 @@ use std::io::BufRead;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::property::Property;
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 
 use super::molecule::Molecule;
-use crate::common::property::Property;
 
 #[derive(Debug, Default, Clone)]
 /// A database cross-reference.
 pub struct DbReference {
     pub molecule: Option<Molecule>,
     pub property: Vec<Property>,
-    pub ty: String,
-    pub id: String,
+    pub ty: ShortString,
+    pub id: ShortString,
     pub evidences: Vec<usize>,
 }
 
@@ -45,12 +46,12 @@ impl FromXml for DbReference {
         // let attr = attributes_to_hashmap(event)?;
         db_reference.ty = extract_attribute(event, "type")?
             .ok_or(Error::MissingAttribute("type", "dbReference"))?
-            .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .decode_and_unescape_value(reader)?
+            .into();
         db_reference.id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "dbReference"))?
-            .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .decode_and_unescape_value(reader)?
+            .into();
 
         Ok(db_reference)
     }

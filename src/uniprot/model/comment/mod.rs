@@ -20,9 +20,10 @@ use quick_xml::Reader;
 #[cfg(feature = "url-links")]
 use url::Url;
 
+use crate::common::ShortString;
 use crate::error::Error;
-use crate::parser::utils::get_evidences;
 use crate::parser::utils::extract_attribute;
+use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
 use super::feature_location::FeatureLocation;
@@ -58,7 +59,7 @@ pub struct Comment {
     // fields
     pub molecule: Option<Molecule>,
     // location: Vec<Location>,
-    pub text: Vec<String>, // FIXME: type should be evidence text?
+    pub text: Vec<ShortString>, // FIXME: type should be evidence text?
     pub ty: CommentType,
     pub evidences: Vec<usize>, // TODO: extract evidence attribute
 }
@@ -253,11 +254,11 @@ impl FromXml for Comment {
                 ms.error = extract_attribute(event, "error")?
                     .map(|x| x.decode_and_unescape_value(reader))
                     .transpose()?
-                    .map(Cow::into_owned);
+                    .map(From::from);
                 ms.method = extract_attribute(event, "method")?
                     .map(|x| x.decode_and_unescape_value(reader))
                     .transpose()?
-                    .map(Cow::into_owned);
+                    .map(From::from);
 
                 parse_comment! {event, reader, buffer, comment}
                 comment.ty = CommentType::MassSpectrometry(ms);
@@ -351,7 +352,7 @@ impl FromXml for Comment {
                 info.name = extract_attribute(event, "name")?
                     .map(|a| a.decode_and_unescape_value(reader))
                     .transpose()?
-                    .map(Cow::into_owned);
+                    .map(From::from);
 
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"link" => {
@@ -360,7 +361,7 @@ impl FromXml for Comment {
                             .transpose()?
                             .map(|a| a.decode_and_unescape_value(reader))
                             .transpose()?
-                            .map(Cow::into_owned)
+                            .map(From::from)
                             .ok_or(Error::MissingElement("uri", "link"))?;
                         #[cfg(feature = "url-links")]
                         info.links.push(Url::from_str(&uri)?);
@@ -397,7 +398,7 @@ impl FromXml for Comment {
                 return Err(Error::invalid_value(
                     "type",
                     "comment",
-                    String::from_utf8_lossy(other),
+                    std::string::String::from_utf8_lossy(other),
                 ))
             }
         }

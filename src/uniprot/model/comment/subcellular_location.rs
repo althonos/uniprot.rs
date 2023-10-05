@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -11,9 +12,9 @@ use crate::parser::FromXml;
 #[derive(Debug, Default, Clone)]
 /// The subcellular location (and optionally the topology and orientation) of a molecule.
 pub struct SubcellularLocation {
-    pub locations: Vec<String>,    // TODO: EvidenceString, minOccurs = "1"
-    pub topologies: Vec<String>,   // TODO: EvidenceString,
-    pub orientations: Vec<String>, // TODO: EvidenceString,
+    pub locations: Vec<ShortString>, // TODO: EvidenceShortString, minOccurs = "1"
+    pub topologies: Vec<ShortString>, // TODO: EvidenceShortString,
+    pub orientations: Vec<ShortString>, // TODO: EvidenceShortString,
 }
 
 impl FromXml for SubcellularLocation {

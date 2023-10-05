@@ -29,6 +29,7 @@ use std::ops::DerefMut;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
@@ -40,9 +41,9 @@ use crate::parser::UniprotDatabase;
 /// A UniParc entry.
 pub struct Entry {
     // attributes
-    pub dataset: String,
+    pub dataset: ShortString,
     // fields
-    pub accession: String,
+    pub accession: ShortString,
     pub db_references: Vec<DbReference>,
     pub signature_sequence_matches: Vec<SignatureSequenceMatch>,
     pub sequence: Sequence,
@@ -59,7 +60,7 @@ impl FromXml for Entry {
         let dataset = extract_attribute(event, "dataset")?
             .ok_or(Error::MissingAttribute("dataset", "entry"))?
             .decode_and_unescape_value(reader)
-            .map(Cow::into_owned)?;
+            .map(ShortString::from)?;
 
         let mut accession = None;
         let mut sequence = None;

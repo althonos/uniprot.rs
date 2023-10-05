@@ -4,6 +4,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
@@ -40,17 +41,17 @@ impl FromXml for Gene {
 #[derive(Debug, Clone)]
 /// Describes different types of gene designations.
 pub struct Name {
-    pub value: String,
+    pub value: ShortString,
     pub ty: NameType,
     pub evidence: Vec<usize>,
 }
 
 impl Name {
-    pub fn new(value: String, ty: NameType) -> Self {
+    pub fn new(value: ShortString, ty: NameType) -> Self {
         Self::new_with_evidence(value, ty, Vec::new())
     }
 
-    pub fn new_with_evidence(value: String, ty: NameType, evidence: Vec<usize>) -> Self {
+    pub fn new_with_evidence(value: ShortString, ty: NameType, evidence: Vec<usize>) -> Self {
         Self {
             value,
             ty,

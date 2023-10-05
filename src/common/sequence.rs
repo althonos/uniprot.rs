@@ -1,5 +1,6 @@
 use std::io::BufRead;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
@@ -10,7 +11,7 @@ use quick_xml::Reader;
 /// A protein sequence.
 #[derive(Debug, Clone)]
 pub struct Sequence {
-    pub sequence: String,
+    pub sequence: ShortString,
     pub length: usize,
     pub checksum: u64,
 }

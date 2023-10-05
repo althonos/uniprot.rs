@@ -4,17 +4,19 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
-use super::Date;
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::error::InvalidValue;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 
+use super::Date;
+
 #[derive(Debug, Default, Clone)]
 /// The sequence of a protein.
 pub struct Sequence {
-    pub value: String,
+    pub value: ShortString,
     pub length: usize,
     pub mass: usize,
     pub checksum: u64,

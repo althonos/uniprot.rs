@@ -1,11 +1,14 @@
 use std::io::BufRead;
 
-use super::Reference;
-use super::Sequence;
-use crate::error::Error;
-use crate::parser::FromXml;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
+
+use crate::common::ShortString;
+use crate::error::Error;
+use crate::parser::FromXml;
+
+use super::Reference;
+use super::Sequence;
 
 /// A UniRef cluster member.
 #[derive(Debug, Clone)]

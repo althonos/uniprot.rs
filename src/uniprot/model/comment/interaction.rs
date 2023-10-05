@@ -5,10 +5,12 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
-use super::super::DbReference;
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
+
+use super::super::DbReference;
 
 #[derive(Debug, Clone)]
 pub struct Interaction {
@@ -19,14 +21,14 @@ pub struct Interaction {
 
 #[derive(Debug, Clone)]
 pub struct Interactant {
-    pub interactant_id: String,
-    pub id: Option<String>,
-    pub label: Option<String>,
+    pub interactant_id: ShortString,
+    pub id: Option<ShortString>,
+    pub label: Option<ShortString>,
     pub db_reference: Vec<DbReference>,
 }
 
 impl Interactant {
-    pub fn new(interactant_id: String) -> Self {
+    pub fn new(interactant_id: ShortString) -> Self {
         Self {
             interactant_id,
             id: Default::default(),
@@ -55,7 +57,7 @@ impl FromXml for Interactant {
             .ok_or(Error::MissingAttribute("intactId", "Interactant"))?
             .map_err(Error::from)
             .and_then(|a| a.decode_and_unescape_value(reader).map_err(Error::from))
-            .map(Cow::into_owned)
+            .map(From::from)
             .map(Interactant::new)?;
 
         parse_inner! {event, reader, buffer,

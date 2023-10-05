@@ -5,6 +5,7 @@ use std::str::FromStr;
 use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
+use crate::common::ShortString;
 use crate::error::Error;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
@@ -16,13 +17,13 @@ use super::db_reference::DbReference;
 /// The evidence for an annotation.
 pub struct Evidence {
     pub key: usize,
-    pub ty: String,
+    pub ty: ShortString,
     pub source: Option<Source>,
     pub imported_from: Option<DbReference>,
 }
 
 impl Evidence {
-    pub fn new(key: usize, ty: String) -> Self {
+    pub fn new(key: usize, ty: ShortString) -> Self {
         Self {
             key,
             ty,
@@ -43,8 +44,8 @@ impl FromXml for Evidence {
         let key = decode_attribute(event, reader, "key", "evidence")?;
         let ty = extract_attribute(event, "type")?
             .map(|x| x.decode_and_unescape_value(reader))
-            .ok_or(Error::MissingAttribute("type", "evidence"))?
-            .map(Cow::into_owned)?;
+            .ok_or(Error::MissingAttribute("type", "evidence"))??
+            .into();
 
         let mut evidence = Self::new(key, ty);
         parse_inner! {event, reader, buffer,

@@ -39,14 +39,16 @@ optional = true
 [dependencies.crossbeam-channel]
 version = "0.5.8"
 optional = true
+[dependencies.smartstring]
+version = "1.0"
+optional = true
 
 [dev-dependencies]
 ftp = "3.0.1"
 libflate = "2.0.0"
 ureq = "2.4.0"
-indicatif = "*"
 
 [features]
 url-links = ["url"]
 threading = ["crossbeam-channel", "lazy_static", "num_cpus"]
-default = ["threading"]
+default = ["threading", "smartstring"]
