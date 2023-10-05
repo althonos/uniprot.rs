@@ -133,7 +133,7 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
         xml.expand_empty_elements(true);
 
         // create the communication channels
-        let (s_text, r_text) = crossbeam_channel::unbounded();
+        let (s_text, r_text) = crossbeam_channel::bounded(threads);
         let (s_item, r_item) = crossbeam_channel::unbounded();
 
         // read until we enter the root element

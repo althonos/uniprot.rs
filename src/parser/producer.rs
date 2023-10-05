@@ -59,7 +59,6 @@ impl<B: BufRead + Send + 'static> Producer<B> {
             let mut buffer = vec![0; 8192];
             let mut buffer_start = 0;
             let mut buffer_end = 0;
-
             let mut buffer_entries = 0;
 
             loop {
@@ -68,99 +67,51 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                         s_text.send(Some(Err(Error::from(e)))).ok();
                         break;
                     }
-
                     Ok(n) => {
-                        if n == 0 {
-                            break;
-                        }
-
-                        // count number of newly read entries
-                        for i in memchr::memchr_iter(b'<', &buffer[buffer_end..buffer_end + n]) {
-                            if buffer[buffer_end + i..].starts_with(b"</entry>") {
-                                buffer_entries += 1;
-                            }
-                        }
-
                         buffer_end += n;
-                        if buffer_entries > 32 {
-                            let mut spans = Vec::new();
+                        let mut i = None;
+                        for x in memchr::memchr_iter(b'<', &buffer[..buffer_end]) {
+                            if buffer[x..buffer_end].starts_with(b"<entry") {
+                                i = Some(x);
+                                break;
+                            }
+                        }
+                        let mut j = None;
+                        for y in memchr::memrchr_iter(b'>', &buffer[..buffer_end]) {
+                            if buffer[..=y].ends_with(b"</entry>") {
+                                j = Some(y);
+                                break;
+                            }
+                        }
 
-                            loop {
-                                let mut i = 0;
-                                for x in
-                                    memchr::memchr_iter(b'<', &buffer[buffer_start..buffer_end])
-                                {
-                                    if buffer[buffer_start + x..buffer_end].starts_with(b"<entry") {
-                                        i = x;
-                                        break;
-                                    }
-                                }
-
-                                let mut j = i;
-                                for y in
-                                    memchr::memchr_iter(b'>', &buffer[buffer_start + i..buffer_end])
-                                {
-                                    if buffer[buffer_start + i..=buffer_start + i + y]
-                                        .ends_with(b"</entry>")
-                                    {
-                                        j = i + y + 1;
-                                        break;
-                                    }
-                                }
-
-                                if j > i {
-                                    spans.push(buffer_start + i..buffer_start + j);
-                                    // let block = &buffer[buffer_start+i..buffer_start+j];
-                                    // let buffer = Buffer { data: block.to_vec() };
-                                    // s_text.send(Some(Ok(buffer))).ok();
-                                    buffer_start += j;
-                                } else {
-                                    break;
+                        if let Some(i) = i {
+                            if let Some(j) = j {
+                                s_text
+                                    .send(Some(Ok(Buffer {
+                                        data: Arc::new(buffer[i..j].to_vec()),
+                                        range: 0..j - i,
+                                    })))
+                                    .ok();
+                                buffer_start = j + 1;
+                            } else {
+                                if n == 0 {
+                                    let name = String::from("entry");
+                                    let err = Error::from(XmlError::UnexpectedEof(name));
+                                    s_text.send(Some(Err(err))).ok();
                                 }
                             }
+                        }
 
-                            let mut new_buffer = vec![0; buffer.len()];
-                            new_buffer[..buffer_end - buffer_start]
-                                .copy_from_slice(&buffer[buffer_start..buffer_end]);
-
-                            let buffer_arc = Arc::new(buffer);
-                            for span in spans {
-                                let buffer = Buffer {
-                                    data: buffer_arc.clone(),
-                                    range: span,
-                                };
-                                s_text.send(Some(Ok(buffer))).ok();
-                            }
-
-                            // loop {
-
-                            //     let mut i = 0;
-                            //     while let Some(i) = memchr::mem
-
-                            // }
-
-                            // for i in memchr::memchr_iter(b'<', &buffer[0..buffer_end]) {
-                            //     if buffer[i..buffer_end].starts_with(b"<entry") {
-                            //         for j in memchr::memchr_iter(b'>', &buffer[i..buffer_end]) {
-                            //             if buffer[i..i+j+1].ends_with(b"</entry>") {
-                            //                 let block = &buffer[i..i+j];
-                            //                 s_text.send(Some(Ok(block.to_vec()))).ok();
-                            //                 buffer_start = i+j+1;
-                            //                 buffer_entries -= 1;
-                            //             }
-                            //         }
-                            //     }
-                            // }
-                            // println!("buffer_start={:?}", buffer_start);
-
-                            // buffer.copy_within(buffer_start..buffer_end, 0);
-                            buffer = new_buffer;
+                        if buffer_start > 0 {
+                            buffer.copy_within(buffer_start..buffer_end, 0);
                             buffer_end -= buffer_start;
                             buffer_start = 0;
                         }
-
                         if buffer_end == buffer.len() {
                             buffer.resize(buffer.len() * 2, 0);
+                        }
+                        if n == 0 {
+                            break;
                         }
                     }
                 }

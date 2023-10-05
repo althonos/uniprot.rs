@@ -76,26 +76,23 @@ impl<D: UniprotDatabase> Consumer<D> {
                 // parse the XML file and send the result to the main thread
                 let mut xml = Reader::from_reader(Cursor::new(text.as_ref()));
                 xml.expand_empty_elements(true).trim_text(true);
-                match xml.read_event_into(&mut buffer) {
-                    Err(e) => {
-                        s_item.send(Err(Error::from(e))).ok();
-                        return;
+                loop {
+                    match xml.read_event_into(&mut buffer) {
+                        Err(e) => {
+                            s_item.send(Err(Error::from(e))).ok();
+                            return;
+                        }
+                        Ok(Event::Eof) => break,
+                        Ok(Event::Start(s)) if s.local_name().as_ref() == b"entry" => {
+                            let e = D::Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
+                            s_item.send(e).ok();
+                        }
+                        e => unreachable!("unexpected XML event: {:?}", e),
                     }
-                    Ok(Event::Eof) => {
-                        let name = String::from("entry");
-                        let err = Error::from(XmlError::UnexpectedEof(name));
-                        s_item.send(Err(err)).ok();
-                        return;
-                    }
-                    Ok(Event::Start(s)) if s.local_name().as_ref() == b"entry" => {
-                        let e = D::Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
-                        s_item.send(e).ok();
-                    }
-                    e => unreachable!("unexpected XML event: {:?}", e),
-                }
 
-                // clear the event buffer
-                buffer.clear();
+                    // clear the event buffer
+                    buffer.clear();
+                }
             }
         }));
     }
