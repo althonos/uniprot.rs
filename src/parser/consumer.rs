@@ -18,13 +18,14 @@ use quick_xml::events::Event;
 use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
+use super::Buffer;
 use super::FromXml;
 use super::UniprotDatabase;
 use super::SLEEP_DURATION;
 use crate::error::Error;
 
 pub struct Consumer<D: UniprotDatabase> {
-    r_text: Receiver<Option<Result<Vec<u8>, Error>>>,
+    r_text: Receiver<Option<Result<Buffer, Error>>>,
     s_item: Sender<Result<D::Entry, Error>>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
@@ -32,7 +33,7 @@ pub struct Consumer<D: UniprotDatabase> {
 
 impl<D: UniprotDatabase> Consumer<D> {
     pub(super) fn new(
-        r_text: Receiver<Option<Result<Vec<u8>, Error>>>,
+        r_text: Receiver<Option<Result<Buffer, Error>>>,
         s_item: Sender<Result<D::Entry, Error>>,
     ) -> Self {
         Self {
@@ -73,7 +74,7 @@ impl<D: UniprotDatabase> Consumer<D> {
                 };
 
                 // parse the XML file and send the result to the main thread
-                let mut xml = Reader::from_reader(Cursor::new(&text));
+                let mut xml = Reader::from_reader(Cursor::new(text.as_ref()));
                 xml.expand_empty_elements(true).trim_text(true);
                 match xml.read_event_into(&mut buffer) {
                     Err(e) => {

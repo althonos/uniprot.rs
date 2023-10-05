@@ -67,6 +67,18 @@ const SLEEP_DURATION: Duration = Duration::from_millis(10);
 
 // ---------------------------------------------------------------------------
 
+#[derive(Debug, PartialEq, Eq)]
+struct Buffer {
+    data: Arc<Vec<u8>>,
+    range: std::ops::Range<usize>,
+}
+
+impl AsRef<[u8]> for Buffer {
+    fn as_ref(&self) -> &[u8] {
+        &self.data[self.range.start..self.range.end]
+    }
+}
+
 #[cfg(feature = "threading")]
 #[derive(Debug, PartialEq, Eq)]
 /// The state of the `ThreadedParser`.
@@ -121,8 +133,8 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
         xml.expand_empty_elements(true);
 
         // create the communication channels
-        let (s_text, r_text) = crossbeam_channel::bounded(threads);
-        let (s_item, r_item) = crossbeam_channel::bounded(threads);
+        let (s_text, r_text) = crossbeam_channel::unbounded();
+        let (s_item, r_item) = crossbeam_channel::unbounded();
 
         // read until we enter the root element
         loop {
