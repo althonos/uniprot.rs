@@ -73,6 +73,7 @@ const SLEEP_DURATION: Duration = Duration::from_millis(10);
 enum State {
     Idle,
     Started,
+    Waiting,
     Finished,
 }
 
@@ -186,12 +187,26 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
                         consumer.start();
                     }
                 }
-                State::Finished => {
+                State::Finished => return None,
+                State::Waiting => {
                     self.producer.join().unwrap();
                     for consumer in &mut self.consumers {
                         consumer.join().unwrap();
                     }
-                    return None;
+                    match self.r_item.try_recv() {
+                        // item is found: simply return it
+                        Ok(item) => return Some(item),
+                        // empty queue: check if the producer is finished
+                        Err(TryRecvError::Empty) => {
+                            self.state = State::Finished;
+                            return None;
+                        },
+                        // queue was disconnected: stop and return an error
+                        Err(TryRecvError::Disconnected) => {
+                            self.state = State::Finished;
+                            return Some(Err(Error::DisconnectedChannel));
+                        }
+                    }               
                 }
                 State::Started => {
                     // poll for parsed entries to return
@@ -201,15 +216,13 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
                         // empty queue: check if the producer is finished
                         Err(RecvTimeoutError::Timeout) => {
                             if !self.producer.is_alive() {
-                                self.state = State::Finished
+                                self.state = State::Waiting
                             }
                         }
                         // queue was disconnected: stop and return an error
                         Err(RecvTimeoutError::Disconnected) => {
-                            if self.state != State::Finished {
-                                self.state = State::Finished;
-                                return Some(Err(Error::DisconnectedChannel));
-                            }
+                            self.state = State::Finished;
+                            return Some(Err(Error::DisconnectedChannel));
                         }
                     }
                 }

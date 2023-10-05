@@ -9,6 +9,9 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use crossbeam_channel::Sender;
+use quick_xml::Error as XmlError;
+
+use crate::error::Error;
 
 #[cfg(feature = "threading")]
 #[derive(Debug, PartialEq, Eq)]
@@ -16,7 +19,6 @@ use crossbeam_channel::Sender;
 enum State {
     Started,
     Reading,
-    AtEof,
     Finished,
 }
 
@@ -24,13 +26,13 @@ enum State {
 pub struct Producer<B> {
     reader: Option<B>,
     threads: usize,
-    s_text: Sender<Option<Vec<u8>>>,
+    s_text: Sender<Option<Result<Vec<u8>, Error>>>,
     alive: Arc<AtomicBool>,
     handle: Option<std::thread::JoinHandle<()>>,
 }
 
 impl<B: BufRead + Send + 'static> Producer<B> {
-    pub(super) fn new(reader: B, threads: usize, s_text: Sender<Option<Vec<u8>>>) -> Self {
+    pub(super) fn new(reader: B, threads: usize, s_text: Sender<Option<Result<Vec<u8>, Error>>>) -> Self {
         Self {
             reader: Some(reader),
             s_text,
@@ -57,10 +59,7 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                         // we reached EOF, but that's okay, we were not
                         // reading an entry;
                         Ok(0) => {
-                            for _ in 0..threads {
-                                s_text.send(None).ok();
-                            }
-                            state = State::AtEof;
+                            state = State::Finished;
                         }
                         // we found the beginning of an entry, now we
                         // must read the entire entry until the end.
@@ -72,9 +71,8 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                         }
                         // if an error is encountered, send it and bail out
                         Err(e) => {
-                            panic!("XML error");
+                            s_text.send(Some(Err(Error::from(e)))).ok();
                             state = State::Finished;
-                            // return Some(Err(Error::from(e)));
                         }
                     },
                     State::Reading => {
@@ -82,37 +80,34 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                         match reader.read_until(b'>', &mut buffer) {
                             // if a full entry is found, send it
                             Ok(_) if buffer.ends_with(&b"</entry>"[..]) => {
-                                s_text.send(Some(buffer.as_slice().to_vec())).ok();
+                                s_text.send(Some(Ok(buffer.as_slice().to_vec()))).ok();
                                 state = State::Started;
                                 buffer.clear();
                             }
                             // if we reach EOF before finding the end of the
                             // entry, that's an issue, we report an error.
                             Ok(0) => {
-                                for _ in 0..threads {
-                                    s_text.send(None).ok();
-                                }
-                                state = State::AtEof;
-                                panic!("unexpected EOF");
-                                // return Some(Err(Error::from(XmlError::UnexpectedEof(String::from(
-                                //     "entry",
-                                // )))));
+                                s_text.send(Some(Err(Error::from(XmlError::UnexpectedEof(String::from("entry")))))).ok();
+                                state = State::Finished;
                             }
                             // if an error is encountered, send it and bail out
                             Err(e) => {
+                                s_text.send(Some(Err(Error::from(e)))).ok();
                                 state = State::Finished;
-                                panic!("XML error");
-                                // return Some(Err(Error::from(e)));
                             }
                             // otherwise just keep iterating.
                             _ => (),
                         }
                     }
-                    State::AtEof | State::Finished => break,
-                    _ => unimplemented!(),
+                    State::Finished => {
+                        for _ in 0..threads {
+                            s_text.send(None).ok();
+                        }
+                        alive.store(false, Ordering::SeqCst);
+                        break;
+                    },
                 }
             }
-            alive.store(false, Ordering::SeqCst);
         }));
     }
 

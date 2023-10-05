@@ -24,7 +24,7 @@ use super::SLEEP_DURATION;
 use crate::error::Error;
 
 pub struct Consumer<D: UniprotDatabase> {
-    r_text: Receiver<Option<Vec<u8>>>,
+    r_text: Receiver<Option<Result<Vec<u8>, Error>>>,
     s_item: Sender<Result<D::Entry, Error>>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
@@ -32,7 +32,7 @@ pub struct Consumer<D: UniprotDatabase> {
 
 impl<D: UniprotDatabase> Consumer<D> {
     pub(super) fn new(
-        r_text: Receiver<Option<Vec<u8>>>,
+        r_text: Receiver<Option<Result<Vec<u8>, Error>>>,
         s_item: Sender<Result<D::Entry, Error>>,
     ) -> Self {
         Self {
@@ -56,7 +56,10 @@ impl<D: UniprotDatabase> Consumer<D> {
                 // get the buffer containing the XML entry
                 let text = loop {
                     match r_text.recv_timeout(SLEEP_DURATION) {
-                        Ok(Some(text)) => break text,
+                        Ok(Some(Ok(text))) => break text,
+                        Ok(Some(Err(err))) => {
+                            s_item.send(Err(err)).ok();
+                        }
                         Ok(None) => {
                             alive.store(false, Ordering::SeqCst);
                             return;
