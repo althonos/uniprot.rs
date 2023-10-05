@@ -32,7 +32,11 @@ pub struct Producer<B> {
 }
 
 impl<B: BufRead + Send + 'static> Producer<B> {
-    pub(super) fn new(reader: B, threads: usize, s_text: Sender<Option<Result<Vec<u8>, Error>>>) -> Self {
+    pub(super) fn new(
+        reader: B,
+        threads: usize,
+        s_text: Sender<Option<Result<Vec<u8>, Error>>>,
+    ) -> Self {
         Self {
             reader: Some(reader),
             s_text,
@@ -87,7 +91,11 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                             // if we reach EOF before finding the end of the
                             // entry, that's an issue, we report an error.
                             Ok(0) => {
-                                s_text.send(Some(Err(Error::from(XmlError::UnexpectedEof(String::from("entry")))))).ok();
+                                s_text
+                                    .send(Some(Err(Error::from(XmlError::UnexpectedEof(
+                                        String::from("entry"),
+                                    )))))
+                                    .ok();
                                 state = State::Finished;
                             }
                             // if an error is encountered, send it and bail out
@@ -105,7 +113,7 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                         }
                         alive.store(false, Ordering::SeqCst);
                         break;
-                    },
+                    }
                 }
             }
         }));

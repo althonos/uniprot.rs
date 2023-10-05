@@ -200,13 +200,13 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
                         Err(TryRecvError::Empty) => {
                             self.state = State::Finished;
                             return None;
-                        },
+                        }
                         // queue was disconnected: stop and return an error
                         Err(TryRecvError::Disconnected) => {
                             self.state = State::Finished;
                             return Some(Err(Error::DisconnectedChannel));
                         }
-                    }               
+                    }
                 }
                 State::Started => {
                     // poll for parsed entries to return
