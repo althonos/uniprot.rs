@@ -69,13 +69,12 @@ const SLEEP_DURATION: Duration = Duration::from_millis(10);
 
 #[derive(Debug, PartialEq, Eq)]
 struct Buffer {
-    data: Arc<Vec<u8>>,
-    range: std::ops::Range<usize>,
+    data: Vec<u8>,
 }
 
 impl AsRef<[u8]> for Buffer {
     fn as_ref(&self) -> &[u8] {
-        &self.data[self.range.start..self.range.end]
+        &self.data
     }
 }
 
@@ -93,10 +92,10 @@ enum State {
 /// A parser for the Uniprot XML formats that parses entries in parallel.
 pub struct ThreadedParser<B: BufRead, D: UniprotDatabase> {
     state: State,
-    threads: usize,
     producer: Producer<B>,
     consumers: Vec<Consumer<D>>,
-    r_item: Receiver<Result<D::Entry, Error>>,
+    r_item: Receiver<Result<Vec<D::Entry>, Error>>,
+    queue: Vec<D::Entry>,
 }
 
 #[cfg(feature = "threading")]
@@ -134,7 +133,7 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
 
         // create the communication channels
         let (s_text, r_text) = crossbeam_channel::bounded(threads);
-        let (s_item, r_item) = crossbeam_channel::unbounded();
+        let (s_item, r_item) = crossbeam_channel::bounded(threads);
 
         // read until we enter the root element
         loop {
@@ -179,9 +178,9 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
         Self {
             r_item,
             producer,
-            threads,
             consumers,
             state: State::Idle,
+            queue: Vec::new(),
         }
     }
 }
@@ -191,6 +190,9 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
     type Item = Result<D::Entry, Error>;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            if let Some(item) = self.queue.pop() {
+                return Some(Ok(item));
+            }
             match self.state {
                 State::Idle => {
                     self.state = State::Started;
@@ -207,7 +209,14 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
                     }
                     match self.r_item.try_recv() {
                         // item is found: simply return it
-                        Ok(item) => return Some(item),
+                        Ok(Ok(mut items)) => {
+                            self.queue.append(&mut items);
+                            // return Some(item),
+                        }
+                        Ok(Err(e)) => {
+                            self.state = State::Finished;
+                            return Some(Err(e));
+                        }
                         // empty queue: check if the producer is finished
                         Err(TryRecvError::Empty) => {
                             self.state = State::Finished;
@@ -224,7 +233,13 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> Iterator for ThreadedParse
                     // poll for parsed entries to return
                     match self.r_item.recv_timeout(SLEEP_DURATION) {
                         // item is found: simply return it
-                        Ok(item) => return Some(item),
+                        Ok(Ok(mut items)) => {
+                            self.queue.append(&mut items);
+                        }
+                        Ok(Err(e)) => {
+                            self.state = State::Finished;
+                            return Some(Err(e));
+                        }
                         // empty queue: check if the producer is finished
                         Err(RecvTimeoutError::Timeout) => {
                             if !self.producer.is_alive() {

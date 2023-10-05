@@ -26,7 +26,7 @@ use crate::error::Error;
 
 pub struct Consumer<D: UniprotDatabase> {
     r_text: Receiver<Option<Result<Buffer, Error>>>,
-    s_item: Sender<Result<D::Entry, Error>>,
+    s_item: Sender<Result<Vec<D::Entry>, Error>>,
     alive: Arc<AtomicBool>,
     handle: Option<JoinHandle<()>>,
 }
@@ -34,7 +34,7 @@ pub struct Consumer<D: UniprotDatabase> {
 impl<D: UniprotDatabase> Consumer<D> {
     pub(super) fn new(
         r_text: Receiver<Option<Result<Buffer, Error>>>,
-        s_item: Sender<Result<D::Entry, Error>>,
+        s_item: Sender<Result<Vec<D::Entry>, Error>>,
     ) -> Self {
         Self {
             r_text,
@@ -74,6 +74,7 @@ impl<D: UniprotDatabase> Consumer<D> {
                 };
 
                 // parse the XML file and send the result to the main thread
+                let mut items = Vec::new();
                 let mut xml = Reader::from_reader(Cursor::new(text.as_ref()));
                 xml.expand_empty_elements(true).trim_text(true);
                 loop {
@@ -84,15 +85,22 @@ impl<D: UniprotDatabase> Consumer<D> {
                         }
                         Ok(Event::Eof) => break,
                         Ok(Event::Start(s)) if s.local_name().as_ref() == b"entry" => {
-                            let e = D::Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer);
-                            s_item.send(e).ok();
+                            match D::Entry::from_xml(&s.into_owned(), &mut xml, &mut buffer) {
+                                Ok(e) => items.push(e),
+                                Err(e) => {
+                                    s_item.send(Err(e)).ok();
+                                    return;
+                                }
+                            }
                         }
                         e => unreachable!("unexpected XML event: {:?}", e),
                     }
-
                     // clear the event buffer
                     buffer.clear();
                 }
+
+                // send back the decoded items
+                s_item.send(Ok(items)).ok();
             }
         }));
     }
