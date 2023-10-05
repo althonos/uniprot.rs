@@ -6,7 +6,6 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -55,7 +54,6 @@ impl FromXml for Reaction {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"reaction");
 
-        let attr = attributes_to_hashmap(event)?;
         let mut db_references = Vec::new();
         let mut opttext = None;
 
@@ -75,7 +73,7 @@ impl FromXml for Reaction {
             .map(Reaction::new)
             .ok_or(Error::MissingAttribute("text", "reaction"))?;
         reaction.db_references = db_references;
-        reaction.evidences = get_evidences(reader, &attr)?;
+        reaction.evidences = get_evidences(reader, &event)?;
 
         Ok(reaction)
     }
@@ -101,8 +99,7 @@ impl FromXml for PhysiologicalReaction {
 
         use self::Direction::*;
 
-        let attr = attributes_to_hashmap(event)?;
-        let evidences = get_evidences(reader, &attr)?;
+        let evidences = get_evidences(reader, &event)?;
         let direction = decode_attribute(event, reader, "direction", "physiologicalReaction")?;
 
         let mut optdbref = None;

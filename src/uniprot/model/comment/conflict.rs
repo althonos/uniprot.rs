@@ -7,7 +7,6 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
@@ -123,14 +122,11 @@ impl FromXml for ConflictSequence {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"sequence");
 
-        let attr = attributes_to_hashmap(event)?;
-        let id = attr
-            .get(&b"id"[..])
+        let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "sequence"))?
             .decode_and_unescape_value(reader)
             .map(Cow::into_owned)?;
-        let version = attr
-            .get(&b"version"[..])
+        let version = extract_attribute(event, "version")?
             .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|s| usize::from_str(&s))

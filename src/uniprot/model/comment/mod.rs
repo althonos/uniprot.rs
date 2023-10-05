@@ -21,8 +21,8 @@ use quick_xml::Reader;
 use url::Url;
 
 use crate::error::Error;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
+use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
 
 use super::feature_location::FeatureLocation;
@@ -82,85 +82,87 @@ impl FromXml for Comment {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"comment");
 
-        let attr = attributes_to_hashmap(event)?;
         let mut comment = Comment::new(CommentType::Miscellaneous);
-        comment.evidences = get_evidences(reader, &attr)?;
+        comment.evidences = get_evidences(reader, event)?;
 
-        match attr.get(&b"type"[..]).map(|x| &*x.value) {
-            Some(b"function") => {
+        match extract_attribute(event, "type")?
+            .ok_or(Error::MissingAttribute("type", "comment"))?
+            .value
+            .as_ref()
+        {
+            b"function" => {
                 comment.ty = CommentType::Function;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"similarity") => {
+            b"similarity" => {
                 comment.ty = CommentType::Similarity;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"subunit") => {
+            b"subunit" => {
                 comment.ty = CommentType::Subunit;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"PTM") => {
+            b"PTM" => {
                 comment.ty = CommentType::Ptm;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"developmental stage") => {
+            b"developmental stage" => {
                 comment.ty = CommentType::DevelopmentalStage;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"disruption phenotype") => {
+            b"disruption phenotype" => {
                 comment.ty = CommentType::DisruptionPhenotype;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"tissue specificity") => {
+            b"tissue specificity" => {
                 comment.ty = CommentType::TissueSpecificity;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"miscellaneous") => {
+            b"miscellaneous" => {
                 comment.ty = CommentType::Miscellaneous;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"induction") => {
+            b"induction" => {
                 comment.ty = CommentType::Induction;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"caution") => {
+            b"caution" => {
                 comment.ty = CommentType::Caution;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"pathway") => {
+            b"pathway" => {
                 comment.ty = CommentType::Pathway;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"toxic dose") => {
+            b"toxic dose" => {
                 comment.ty = CommentType::ToxicDose;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"activity regulation") => {
+            b"activity regulation" => {
                 comment.ty = CommentType::ActivityRegulation;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"domain") => {
+            b"domain" => {
                 comment.ty = CommentType::Domain;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"biotechnology") => {
+            b"biotechnology" => {
                 comment.ty = CommentType::Biotechnology;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"polymorphism") => {
+            b"polymorphism" => {
                 comment.ty = CommentType::Polymorphism;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"pharmaceutical") => {
+            b"pharmaceutical" => {
                 comment.ty = CommentType::Pharmaceutical;
                 parse_comment! {event, reader, buffer, comment}
             }
-            Some(b"allergen") => {
+            b"allergen" => {
                 comment.ty = CommentType::Allergen;
                 parse_comment! {event, reader, buffer, comment}
             }
-
-            Some(b"subcellular location") => {
+            b"subcellular location" => {
                 let mut locations = Vec::new();
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"subcellularLocation" => {
@@ -169,8 +171,7 @@ impl FromXml for Comment {
                 }
                 comment.ty = CommentType::SubcellularLocation(locations);
             }
-
-            Some(b"alternative products") => {
+            b"alternative products" => {
                 let mut product = AlternativeProduct::default();
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"event" => {
@@ -182,8 +183,7 @@ impl FromXml for Comment {
                 }
                 comment.ty = CommentType::AlternativeProduct(product);
             }
-
-            Some(b"interaction") => {
+            b"interaction" => {
                 let mut organisms_differ = false;
                 let mut experiments = None;
                 let mut interactants = Vec::new();
@@ -223,7 +223,7 @@ impl FromXml for Comment {
                 });
             }
 
-            Some(b"sequence caution") => {
+            b"sequence caution" => {
                 let mut optconflict = None;
 
                 // extract inner `conflict`
@@ -242,22 +242,19 @@ impl FromXml for Comment {
                     .ok_or(Error::MissingElement("conflict", "sequence caution"))?
             }
 
-            Some(b"mass spectrometry") => {
+            b"mass spectrometry" => {
                 let mut ms = MassSpectrometry::default();
-                ms.mass = attr
-                    .get(&b"mass"[..])
+                ms.mass = extract_attribute(event, "mass")?
                     .map(|x| x.decode_and_unescape_value(reader))
                     .transpose()?
                     .map(|s| f64::from_str(&s))
                     .transpose()
                     .expect("could not parse `mass` as f64");
-                ms.error = attr
-                    .get(&b"error"[..])
+                ms.error = extract_attribute(event, "error")?
                     .map(|x| x.decode_and_unescape_value(reader))
                     .transpose()?
                     .map(Cow::into_owned);
-                ms.method = attr
-                    .get(&b"method"[..])
+                ms.method = extract_attribute(event, "method")?
                     .map(|x| x.decode_and_unescape_value(reader))
                     .transpose()?
                     .map(Cow::into_owned);
@@ -266,7 +263,7 @@ impl FromXml for Comment {
                 comment.ty = CommentType::MassSpectrometry(ms);
             }
 
-            Some(b"disease") => {
+            b"disease" => {
                 let mut optdisease = None;
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"disease" => {
@@ -279,7 +276,7 @@ impl FromXml for Comment {
                 comment.ty = CommentType::Disease(optdisease);
             }
 
-            Some(b"biophysicochemical properties") => {
+            b"biophysicochemical properties" => {
                 let mut bcp = BiophysicochemicalProperties::default();
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"absorption" => {
@@ -322,7 +319,7 @@ impl FromXml for Comment {
                 comment.ty = CommentType::BiophysicochemicalProperties(bcp);
             }
 
-            Some(b"catalytic activity") => {
+            b"catalytic activity" => {
                 let mut physio = Vec::new();
                 let mut optreact = None;
 
@@ -349,10 +346,9 @@ impl FromXml for Comment {
                 comment.ty = CommentType::CatalyticActivity(act);
             }
 
-            Some(b"online information") => {
+            b"online information" => {
                 let mut info = OnlineInformation::default();
-                info.name = attr
-                    .get(&b"name"[..])
+                info.name = extract_attribute(event, "name")?
                     .map(|a| a.decode_and_unescape_value(reader))
                     .transpose()?
                     .map(Cow::into_owned);
@@ -377,7 +373,7 @@ impl FromXml for Comment {
                 comment.ty = CommentType::OnlineInformation(info);
             }
 
-            Some(b"cofactor") => {
+            b"cofactor" => {
                 let mut cofactors = Vec::new();
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"cofactor" => {
@@ -387,7 +383,7 @@ impl FromXml for Comment {
                 comment.ty = CommentType::Cofactor(cofactors)
             }
 
-            Some(b"RNA editing") => {
+            b"RNA editing" => {
                 let mut locations = Vec::new();
                 parse_comment! {event, reader, buffer, comment,
                     e @ b"location" => {
@@ -397,8 +393,7 @@ impl FromXml for Comment {
                 comment.ty = CommentType::RnaEditing(locations);
             }
 
-            None => return Err(Error::MissingAttribute("type", "comment")),
-            Some(other) => {
+            other => {
                 return Err(Error::invalid_value(
                     "type",
                     "comment",

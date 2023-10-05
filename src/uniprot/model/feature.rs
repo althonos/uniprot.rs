@@ -7,7 +7,7 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -65,9 +65,6 @@ impl FromXml for Feature {
 
         use self::FeatureType::*;
 
-        // collect the attributes
-        let attr = attributes_to_hashmap(event)?;
-
         // extract the location and variants
         let mut variation: Vec<String> = Vec::new();
         let mut original: Option<String> = None;
@@ -109,22 +106,19 @@ impl FromXml for Feature {
             .map(|ty| Feature::new(ty, location))?;
 
         // extract optional attributes
-        feature.id = attr
-            .get(&b"id"[..])
+        feature.id = extract_attribute(event, "id")?
             .map(|a| a.decode_and_unescape_value(reader))
             .transpose()?
             .map(Cow::into_owned);
-        feature.description = attr
-            .get(&b"description"[..])
+        feature.description = extract_attribute(event, "description")?
             .map(|a| a.decode_and_unescape_value(reader))
             .transpose()?
             .map(Cow::into_owned);
-        feature.reference = attr
-            .get(&b"ref"[..])
+        feature.reference = extract_attribute(event, "ref")?
             .map(|a| a.decode_and_unescape_value(reader))
             .transpose()?
             .map(Cow::into_owned);
-        feature.evidences = get_evidences(reader, &attr)?;
+        feature.evidences = get_evidences(reader, &event)?;
         feature.original = original;
         feature.variation = variation;
         feature.ligand = optligand;

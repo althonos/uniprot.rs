@@ -7,7 +7,6 @@ use quick_xml::Reader;
 use super::Date;
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
@@ -33,7 +32,6 @@ impl FromXml for Sequence {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"sequence");
 
-        let attr = attributes_to_hashmap(event)?;
         let length = decode_attribute(event, reader, "length", "sequence")?;
         let mass = decode_attribute(event, reader, "mass", "sequence")?;
         let version = decode_attribute(event, reader, "version", "sequence")?;
@@ -44,8 +42,7 @@ impl FromXml for Sequence {
             .transpose()?
             .map(|x| bool::from_str(&x))
             .transpose()?;
-        let checksum = attr
-            .get(&b"checksum"[..])
+        let checksum = extract_attribute(event, "checksum")?
             .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|x| u64::from_str_radix(&x, 16))

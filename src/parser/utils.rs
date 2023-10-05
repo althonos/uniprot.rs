@@ -15,15 +15,6 @@ type HashMap<K, V> = fnv::FnvHashMap<K, V>;
 
 // -----------------------------------------------------------------------
 
-pub fn attributes_to_hashmap<'a>(
-    event: &'a BytesStart<'a>,
-) -> Result<HashMap<&'a [u8], Attribute<'a>>, Error> {
-    event
-        .attributes()
-        .map(|r| r.map(|a| (a.key.into_inner(), a)).map_err(Error::from))
-        .collect()
-}
-
 pub fn extract_attribute<'a>(
     event: &'a BytesStart<'a>,
     name: &str,
@@ -43,9 +34,9 @@ pub fn extract_attribute<'a>(
 
 pub fn get_evidences<'a, B: BufRead>(
     reader: &mut Reader<B>,
-    attr: &HashMap<&'a [u8], Attribute<'a>>,
+    event: &'a BytesStart<'a>,
 ) -> Result<Vec<usize>, Error> {
-    attr.get(&b"evidence"[..])
+    extract_attribute(event, "evidence")?
         .map(|a| a.decode_and_unescape_value(reader))
         .transpose()?
         .map(|e| {

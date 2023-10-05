@@ -5,7 +5,6 @@ use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
@@ -26,7 +25,6 @@ impl FromXml for Cofactor {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"cofactor");
 
-        let attr = attributes_to_hashmap(event)?;
         let mut optname = None;
         let mut optdbref = None;
 
@@ -47,7 +45,7 @@ impl FromXml for Cofactor {
 
         let name = optname.ok_or(Error::MissingElement("name", "cofactor"))?;
         let db_reference = optdbref.ok_or(Error::MissingElement("dbReference", "cofactor"))?;
-        let evidences = get_evidences(reader, &attr)?;
+        let evidences = get_evidences(reader, event)?;
 
         Ok(Cofactor {
             name,

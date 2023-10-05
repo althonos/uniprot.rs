@@ -6,7 +6,6 @@ use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::FromXml;
@@ -41,10 +40,8 @@ impl FromXml for Evidence {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"evidence");
 
-        let attr = attributes_to_hashmap(event)?;
         let key = decode_attribute(event, reader, "key", "evidence")?;
-        let ty = attr
-            .get(&b"type"[..])
+        let ty = extract_attribute(event, "type")?
             .map(|x| x.decode_and_unescape_value(reader))
             .ok_or(Error::MissingAttribute("type", "evidence"))?
             .map(Cow::into_owned)?;

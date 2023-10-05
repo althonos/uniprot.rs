@@ -6,7 +6,6 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -70,9 +69,8 @@ impl FromXml for Name {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"name");
 
-        let attr = attributes_to_hashmap(event)?;
         let name = parse_text!(event, reader, buffer);
-        let evidence = get_evidences(reader, &attr)?;
+        let evidence = get_evidences(reader, &event)?;
         let ty = decode_attribute(event, reader, "type", "name")?;
 
         Ok(Self::new_with_evidence(name, ty, evidence))

@@ -6,7 +6,7 @@ use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
@@ -25,13 +25,10 @@ impl FromXml for Keyword {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"keyword");
 
-        let attr = attributes_to_hashmap(event)?;
         let mut keyword = Keyword::default();
-
         keyword.value = parse_text!(event, reader, buffer);
-        keyword.evidence = get_evidences(reader, &attr)?;
-        keyword.id = attr
-            .get(&b"id"[..])
+        keyword.evidence = get_evidences(reader, &event)?;
+        keyword.id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "keyword"))?
             .decode_and_unescape_value(reader)
             .map(Cow::into_owned)?;

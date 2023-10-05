@@ -6,7 +6,7 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -88,15 +88,13 @@ impl FromXml for Position {
                 || event.local_name().as_ref() == b"position"
         );
 
-        let attr = attributes_to_hashmap(event)?;
         let status = match decode_attribute(event, reader, "status", "position") {
             Ok(status) => status,
             Err(Error::MissingAttribute(_, _)) => Status::default(),
             Err(other) => return Err(other),
         };
-        let evidence = get_evidences(reader, &attr)?;
-        let pos = attr
-            .get(&b"position"[..])
+        let evidence = get_evidences(reader, &event)?;
+        let pos = extract_attribute(event, "position")?
             .map(|x| x.decode_and_unescape_value(reader))
             .transpose()?
             .map(|x| usize::from_str(&x))

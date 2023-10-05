@@ -5,7 +5,6 @@ use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
 
 #[derive(Debug, Default, Clone)]

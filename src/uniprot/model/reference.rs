@@ -7,7 +7,6 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
@@ -67,10 +66,8 @@ impl FromXml for Reference {
         let citation = optcit.ok_or(Error::MissingAttribute("citation", "reference"))?;
         let mut reference = Reference::new(citation, 0);
 
-        let attr = attributes_to_hashmap(event)?;
-        reference.evidences = get_evidences(reader, &attr)?;
-        reference.key = attr
-            .get(&b"key"[..])
+        reference.evidences = get_evidences(reader, &event)?;
+        reference.key = extract_attribute(event, "key")?
             .map(|a| a.decode_and_unescape_value(reader))
             .ok_or(Error::MissingAttribute("key", "reference"))?
             .map(|x| usize::from_str(&x))??;
@@ -150,9 +147,6 @@ impl FromXml for Citation {
         use self::CitationType::*;
         use self::Creator::*;
 
-        // extract attributes
-        let attr = attributes_to_hashmap(event)?;
-
         // get citation type
         let ty = decode_attribute(event, reader, "type", "citation")?;
 
@@ -163,13 +157,11 @@ impl FromXml for Citation {
         // citation.date = attr.get(&b"date"[..])
         //     .map(|v| v.decode_and_unescape_value(&mut self.xml))
         //     .transpose()?;
-        citation.name = attr
-            .get(&b"name"[..])
+        citation.name = extract_attribute(event, "name")?
             .map(|v| v.decode_and_unescape_value(reader))
             .transpose()?
             .map(Cow::into_owned);
-        citation.db = attr
-            .get(&b"db"[..])
+        citation.db = extract_attribute(event, "db")?
             .map(|v| v.decode_and_unescape_value(reader))
             .transpose()?
             .map(Cow::into_owned);
@@ -311,26 +303,22 @@ impl FromXml for Vec<Source> {
         parse_inner! {event, reader, buffer,
             e @ b"strain" => {
                 let value = parse_text!(e, reader, buffer);
-                let evidences = attributes_to_hashmap(&e)
-                    .and_then(|a| get_evidences(reader, &a))?;
+                let evidences = get_evidences(reader, &e)?;
                 sources.push(Source::with_evidences(value, Strain, evidences));
             },
             e @ b"plasmid" => {
                 let value = parse_text!(e, reader, buffer);
-                let evidences = attributes_to_hashmap(&e)
-                    .and_then(|a| get_evidences(reader, &a))?;
+                let evidences = get_evidences(reader, &e)?;
                 sources.push(Source::with_evidences(value, Plasmid, evidences));
             },
             e @ b"transposon" => {
                 let value = parse_text!(e, reader, buffer);
-                let evidences = attributes_to_hashmap(&e)
-                    .and_then(|a| get_evidences(reader, &a))?;
+                let evidences = get_evidences(reader, &e)?;
                 sources.push(Source::with_evidences(value, Transposon, evidences));
             },
             e @ b"tissue" => {
                 let value = parse_text!(e, reader, buffer);
-                let evidences = attributes_to_hashmap(&e)
-                    .and_then(|a| get_evidences(reader, &a))?;
+                let evidences = get_evidences(reader, &e)?;
                 sources.push(Source::with_evidences(value, Tissue, evidences));
             }
         }

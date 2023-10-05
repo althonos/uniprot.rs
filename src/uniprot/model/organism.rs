@@ -6,7 +6,6 @@ use quick_xml::Reader;
 
 use crate::error::Error;
 use crate::error::InvalidValue;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
 use crate::parser::utils::extract_attribute;
 use crate::parser::utils::get_evidences;
@@ -34,10 +33,8 @@ impl FromXml for Organism {
                 || event.local_name().as_ref() == b"organismHost"
         );
 
-        let attr = attributes_to_hashmap(event)?;
-
         let mut organism = Organism::default();
-        organism.evidences = get_evidences(reader, &attr)?;
+        organism.evidences = get_evidences(reader, &event)?;
         parse_inner! {event, reader, buffer,
             e @ b"name" => {
                 organism.names.push(FromXml::from_xml(&e, reader, buffer)?);

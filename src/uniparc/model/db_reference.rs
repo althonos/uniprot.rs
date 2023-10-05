@@ -5,8 +5,8 @@ use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::utils::attributes_to_hashmap;
 use crate::parser::utils::decode_attribute;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_opt_attribute;
 use crate::parser::utils::get_evidences;
 use crate::parser::FromXml;
@@ -41,19 +41,15 @@ impl FromXml for DbReference {
         let created = decode_opt_attribute(event, reader, "created", "dbReference")?;
         let last = decode_opt_attribute(event, reader, "last", "dbReference")?;
 
-        let attributes = attributes_to_hashmap(event)?;
-        let ty = attributes
-            .get(&b"type"[..])
+        let ty = extract_attribute(event, "type")?
             .ok_or(Error::MissingAttribute("type", "dbReference"))?
             .decode_and_unescape_value(reader)
             .map(Cow::into_owned)?;
-        let id = attributes
-            .get(&b"id"[..])
+        let id = extract_attribute(event, "id")?
             .ok_or(Error::MissingAttribute("id", "dbReference"))?
             .decode_and_unescape_value(reader)
             .map(Cow::into_owned)?;
-        let active = attributes
-            .get(&b"id"[..])
+        let active = extract_attribute(event, "active")?
             .ok_or(Error::MissingAttribute("active", "dbReference"))?
             .decode_and_unescape_value(reader)
             .map(Cow::into_owned)?;

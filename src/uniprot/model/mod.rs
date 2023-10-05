@@ -47,7 +47,7 @@ use quick_xml::events::BytesStart;
 use quick_xml::Reader;
 
 use crate::error::Error;
-use crate::parser::utils::attributes_to_hashmap;
+use crate::parser::utils::extract_attribute;
 use crate::parser::utils::decode_attribute;
 use crate::parser::FromXml;
 use crate::parser::UniprotDatabase;
@@ -122,12 +122,14 @@ impl FromXml for Entry {
     ) -> Result<Self, Error> {
         debug_assert_eq!(event.local_name().as_ref(), b"entry");
 
-        let attr = attributes_to_hashmap(event)?;
-        let dataset = match attr.get(&b"dataset"[..]).map(|a| &*a.value) {
-            Some(b"Swiss-Prot") => Dataset::SwissProt,
-            Some(b"TrEMBL") => Dataset::TrEmbl,
-            None => return Err(Error::MissingAttribute("dataset", "entry")),
-            Some(other) => {
+        let dataset = match extract_attribute(event, "dataset")?
+            .ok_or(Error::MissingAttribute("dataset", "entry"))?
+            .value
+            .as_ref() 
+        {
+            b"Swiss-Prot" => Dataset::SwissProt,
+            b"TrEMBL" => Dataset::TrEmbl,
+            other => {
                 return Err(Error::invalid_value(
                     "dataset",
                     "entry",
