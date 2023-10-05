@@ -149,13 +149,14 @@
 extern crate chrono;
 #[cfg(feature = "threading")]
 extern crate crossbeam_channel;
-extern crate fnv;
 #[macro_use]
 #[cfg(feature = "threading")]
 extern crate lazy_static;
 #[cfg(feature = "threading")]
 extern crate num_cpus;
 extern crate quick_xml;
+#[cfg(feature = "smartstring")]
+extern crate smartstring;
 #[cfg(feature = "url-links")]
 extern crate url;
 

@@ -1,17 +1,12 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-use fnv::FnvHashMap;
 use quick_xml::events::attributes::Attribute;
 use quick_xml::events::BytesStart;
 use quick_xml::Error as XmlError;
 use quick_xml::Reader;
 
 use super::Error;
-
-// -----------------------------------------------------------------------
-
-type HashMap<K, V> = fnv::FnvHashMap<K, V>;
 
 // -----------------------------------------------------------------------
 
