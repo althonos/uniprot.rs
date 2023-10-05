@@ -36,7 +36,7 @@ impl<B: BufRead + Send + 'static> Producer<B> {
             threads,
             handle: None,
             alive: Arc::new(AtomicBool::new(false)),
-            buffer_size: 65536, //8192,
+            buffer_size: 8192,
         }
     }
 
@@ -51,7 +51,6 @@ impl<B: BufRead + Send + 'static> Producer<B> {
 
         self.handle = Some(std::thread::spawn(move || {
             let mut buffer = vec![0; buffer_size];
-            let mut buffer_start = 0;
             let mut buffer_end = 0;
 
             loop {
@@ -69,22 +68,21 @@ impl<B: BufRead + Send + 'static> Producer<B> {
                                 .map(|y| y + i)
                                 .find(|&y| buffer[..=y].ends_with(b"</entry>"))
                             {
-                                s_text
-                                    .send(Some(Ok(Buffer {
-                                        data: buffer[i..j].to_vec(),
-                                    })))
-                                    .ok();
-                                buffer_start = j + 1;
-                            } else if n == 0 {
+                                // create a new buffer and copy only remainer of the current one
+                                let mut new_buffer = vec![0; buffer.len()];
+                                new_buffer[0..buffer_end - j - 1]
+                                    .copy_from_slice(&buffer[j + 1..buffer_end]);
+                                // truncate the current buffer and send it to a consumer
+                                buffer.truncate(j + 1);
+                                s_text.send(Some(Ok(Buffer { data: buffer }))).ok();
+                                // update buffer and buffer boundary
+                                buffer = new_buffer;
+                                buffer_end -= j + 1;
+                            } else if n == 0 && buffer_end != 0 {
                                 let name = String::from("entry");
                                 let err = Error::from(XmlError::UnexpectedEof(name));
                                 s_text.send(Some(Err(err))).ok();
                             }
-                        }
-                        if buffer_start > 0 {
-                            buffer.copy_within(buffer_start..buffer_end, 0);
-                            buffer_end -= buffer_start;
-                            buffer_start = 0;
                         }
                         if buffer_end == buffer.len() {
                             buffer.resize(buffer.len() * 2, 0);
