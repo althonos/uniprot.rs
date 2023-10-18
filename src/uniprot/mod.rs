@@ -53,7 +53,7 @@ pub fn parse<B: BufRead + Send + 'static>(reader: B) -> Parser<B> {
 ///
 /// println!("{:?}", entry);
 /// ```
-pub fn parse_entry<B: BufRead + Send + 'static>(reader: B) -> <Parser<B> as Iterator>::Item {
+pub fn parse_entry<B: BufRead>(reader: B) -> <SequentialParser<B> as Iterator>::Item {
     SequentialParser::parse_entry(reader)
 }
 
