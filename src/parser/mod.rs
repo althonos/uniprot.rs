@@ -81,7 +81,6 @@ enum State {
 /// A parser for the Uniprot XML formats that parses entries in parallel.
 pub struct ThreadedParser<B: BufRead, D: UniprotDatabase> {
     state: State,
-    threads: usize,
     producer: Producer<B>,
     consumers: Vec<Consumer<D>>,
     r_item: Receiver<Result<D::Entry, Error>>,
@@ -167,7 +166,6 @@ impl<B: BufRead + Send + 'static, D: UniprotDatabase> ThreadedParser<B, D> {
         Self {
             r_item,
             producer,
-            threads,
             consumers,
             state: State::Idle,
         }

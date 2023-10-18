@@ -62,7 +62,7 @@ impl DerefMut for Date {
 
 impl Default for Date {
     fn default() -> Self {
-        Local::now().date().naive_local().into()
+        Local::now().date_naive().into()
     }
 }
 

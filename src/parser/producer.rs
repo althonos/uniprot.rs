@@ -51,8 +51,8 @@ impl<B: BufRead + Send + 'static> Producer<B> {
 
         let alive = self.alive.clone();
         let threads = self.threads;
+        let s_text = self.s_text.clone();
         let mut reader = self.reader.take().unwrap();
-        let mut s_text = self.s_text.clone();
 
         self.handle = Some(std::thread::spawn(move || {
             let mut buffer = Vec::new();
