@@ -6,7 +6,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/althonos/uniprot.rs/compare/v0.7.0...HEAD
+
+
+## [v0.7.0] - 2023-10-18
+[v0.7.0]: https://github.com/althonos/uniprot.rs/compare/v0.6.0...v0.7.0
+
+### Added
+- `smartstring` feature for using the `smartstring` crate to reduce heap allocations.
+
+### Changed
+- Reduce default sleep duration to reduce strain on CPU.
+- Update `quick-xml` dependency to `v0.30.0`.
+- Use a dedicated producer thread to read data from the reader in `ThreadedParser`.
+
+### Fixed
+- Broken extraction of names in `Citation::from_xml`
+
+### Removed
+- Unused `fnv` dependency.
+- Deprecated `uniprot::parse` top-level function.
 
 
 ## [v0.6.0] - 2022-10-17
