@@ -361,12 +361,11 @@ impl FromXml for Comment {
                             .transpose()?
                             .map(|a| a.decode_and_unescape_value(reader))
                             .transpose()?
-                            .map(From::from)
                             .ok_or(Error::MissingElement("uri", "link"))?;
                         #[cfg(feature = "url-links")]
                         info.links.push(Url::from_str(&uri)?);
                         #[cfg(not(feature = "url-links"))]
-                        info.links.push(uri);
+                        info.links.push(uri.into());
                         reader.read_to_end_into(e.name(), buffer)?;
                     }
                 }
